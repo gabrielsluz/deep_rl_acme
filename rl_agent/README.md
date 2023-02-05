@@ -28,9 +28,9 @@ Checar:
 
 
 Checar na implementacao:
-- Environment loop está rodando corretamente?
-- Discount factor está sendo aplicado o do parâmetro?
-- Epsilon está decaindo e sendo usado pelo rlax?
+- Environment loop está rodando corretamente? sim
+- Discount factor está sendo aplicado o do parâmetro? sim
+- Epsilon está decaindo e sendo usado pelo rlax? sim
 - A política está sendo atualizada no actor?
 - O treinamento está sendo feito?
 - Observações estão sendo contenadas por n_steps?

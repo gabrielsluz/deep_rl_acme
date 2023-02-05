@@ -103,12 +103,8 @@ class DQNFromConfig(agent.Agent):
             actor=actor,
             learner=learner,
             min_observations=max(config.batch_size, config.min_replay_size),
-            observations_per_step=config.batch_size / config.samples_per_insert,
+            observations_per_step=config.observations_per_step,
         )
-    #
-    # def set_epsilon(self):
-    #     pass
-
     # Agent -> EGreedyActor -> ActorCore
     # Interagir com o agent => set_epsilon/get_epsilon
     # Pode usar o Agent normal, pois o actor recebe a observation e o ActorCore que recebe o state.
@@ -131,7 +127,7 @@ class DQN(DQNFromConfig):
       batch_size: int = 256,
       prefetch_size: int = 4,
       target_update_period: int = 100,
-      samples_per_insert: float = 0.5,
+      observations_per_step: float = 1.0,
       min_replay_size: int = 1000,
       max_replay_size: int = 1000000,
       importance_sampling_exponent: float = 0.2,
@@ -148,7 +144,7 @@ class DQN(DQNFromConfig):
         batch_size=batch_size,
         prefetch_size=prefetch_size,
         target_update_period=target_update_period,
-        samples_per_insert=samples_per_insert,
+        observations_per_step=observations_per_step,
         min_replay_size=min_replay_size,
         max_replay_size=max_replay_size,
         importance_sampling_exponent=importance_sampling_exponent,

@@ -52,6 +52,7 @@ class DQNConfig:
       See a formula in make_replay_tables for more details.
     num_sgd_steps_per_step: How many gradient updates to perform per learner
       step.
+    observations_per_step := num_actor_actions / num_learner_steps.
   """
   epsilon_start: float = 1.0
   epsilon_end: float = 0.05
@@ -75,8 +76,9 @@ class DQNConfig:
   importance_sampling_exponent: float = 0.2
   priority_exponent: float = 0.6
   prefetch_size: int = 4
-  samples_per_insert: float = 0.5
-  samples_per_insert_tolerance_rate: float = 0.1
+  observations_per_step: float = 0.5
+  # samples_per_insert: float = 0.5
+  # samples_per_insert_tolerance_rate: float = 0.1
 
   num_sgd_steps_per_step: int = 1
 

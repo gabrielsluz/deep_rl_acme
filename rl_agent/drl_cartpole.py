@@ -53,11 +53,11 @@ def main():
     agent = dqn.DQN(
         environment_spec=env_spec, 
         network=network, 
-        # batch_size=64,
+        batch_size=16,
         # prefetch_size=4,
         # target_update_period=100,
-        # samples_per_insert=1.0,
-        # min_replay_size=1000,
+        observations_per_step=2.0,
+        min_replay_size=16,
         # max_replay_size=1000000,
         # importance_sampling_exponent=0.2,
         # priority_exponent=0.6,
@@ -73,7 +73,7 @@ def main():
     # Usar o estilo Alysson: Rodar 20 episodios por epoca e pegar os resultados
 
     loop = EnvironmentLoop(env, agent)
-    loop.run(num_episodes=2)
+    loop.run(num_episodes=200)
 
 if __name__ == '__main__':
     main()
