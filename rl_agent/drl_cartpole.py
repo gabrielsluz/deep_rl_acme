@@ -1,6 +1,5 @@
 import numpy as np
 
-
 import jax
 import jax.numpy as jnp
 import haiku as hk
@@ -13,7 +12,7 @@ from acme.jax import utils
 
 import dqn
 
-from gym26_wrapper import GymWrapper
+from wrappers.gym26_wrapper import GymWrapper
 from environment_loop import EnvironmentLoop
 
 
@@ -69,8 +68,6 @@ def main():
         # discount=0.95,
         # seed=1,
     )
-
-    # Usar o estilo Alysson: Rodar 20 episodios por epoca e pegar os resultados
 
     loop = EnvironmentLoop(env, agent)
     loop.run(num_episodes=200)
