@@ -33,5 +33,5 @@ Checar na implementacao:
 - Epsilon está decaindo e sendo usado pelo rlax? sim
 - A política está sendo atualizada no actor? sim
 - O treinamento está sendo feito? sim
-- Observações estão sendo concatenadas por n_steps?
-- O que é td-learning por n_steps?
+- Observações estão sendo concatenadas por n_steps? nao
+- O que é td-learning por n_steps? 

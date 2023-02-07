@@ -11,7 +11,8 @@ from acme.jax import utils
 import dqn
 
 from acme.wrappers import GymWrapper
-from wrappers.add_channel_wrapper import AddChannelDimWrapper
+# from wrappers.add_channel_wrapper import AddChannelDimWrapper
+from wrappers.frame_stack_wrapper import FrameStackWrapper
 from environment_loop import EnvironmentLoop
 from research_envs.envs.box2D_img_pushing_env import Box2DPushingEnv
 from research_envs.envs.rewards import RewardFunctions
@@ -29,7 +30,7 @@ def calc_suc_rate(data: list) -> float:
 def create_environment():
     env = Box2DPushingEnv(smoothDraw=False, reward=RewardFunctions.PROJECTION, max_steps=100)
     env = GymWrapper(env)
-    env = AddChannelDimWrapper(env)
+    env = FrameStackWrapper(env, frameStackDepth=4)
     return env
 
 def main():
@@ -109,7 +110,12 @@ def main():
             - Tamanho do batch
             - Steps de learner por steps de actor => 1 learner por episodio => 1 por 20-100 observations?
             - Atualizar a target a cada 5 epocas
-            
+    Objetivo:
+        - Encontrar os parâmetros que atingem o melhor treinamento consistentemente.
+            - Definir quais são os parâmetros chave e
+            - Coletar os dados e colocar em csv => plotar os gráficos 
+            - Guardar os parâmetros
+        - Usar esses parâmetros para retângulo        
 
     """
 
