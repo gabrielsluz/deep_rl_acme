@@ -35,3 +35,35 @@ Checar na implementacao:
 - O treinamento está sendo feito? sim
 - Observações estão sendo concatenadas por n_steps? nao
 - O que é td-learning por n_steps? 
+
+Experimentos:
+- Definir quais os parametros importantes
+- Definir como rodar experimentos => gambiarra por enquanto.
+    - Guardar: logs, parametros
+- Fazer uma busca de hiperparametros considerando-os independentes.
+- Rodar para objeto retangular
+
+
+Parametros importantes:
+- Experimento:
+    - n_epochs
+    - ep_per_epoch: 20
+- Env:
+    - FrameStackDepth: [1,2,4]
+    - max_steps: 100
+    - reward: projection, outra que seja mais adequada a objetos de diferentes formas
+- Otimizador:
+    - learning_rate: 1e-3
+    - batch_size: 2048 => so comeca a treinar a partir da epoca 3.
+- RL:
+    - Epsilon decay
+    - discount: 0.95
+- Learner:
+    - target_update_period
+    - observations_per_step
+    - min_replay_size = batch_size
+
+Próximos passos:
+- Entender o RainbowDQN
+- Função de recompensa
+- Outros algoritmos de RL

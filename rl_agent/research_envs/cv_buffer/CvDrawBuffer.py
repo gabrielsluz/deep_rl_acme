@@ -4,7 +4,7 @@ import queue
 
 class CvDrawBuffer:
     def __init__(self, window_name = 'Buffer', resolution=(320,320)):
-        self.buffer = deque(maxlen=2)
+        self.buffer = deque(maxlen=1) # Was maxlen=2
         self.first_draw = True
         self.window_name = window_name
         self.resolution = resolution

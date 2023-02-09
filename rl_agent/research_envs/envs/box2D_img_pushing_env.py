@@ -239,6 +239,11 @@ class Box2DPushingEnv():
         # get new observation for a new epoch or simulation
         observation = self.push_simulator.getStateImg()
 
+        # Fill render
+        async_buffer = self.push_simulator.drawToBuffer()
+        self.scene_buffer.PushFrame(async_buffer)
+        self.robot_img_state.PushFrame(observation)
+
         # observation, info
         return observation
 

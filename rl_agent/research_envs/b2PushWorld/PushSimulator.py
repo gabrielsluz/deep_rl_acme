@@ -27,9 +27,9 @@ class PushSimulator:
         self.goal = b2Vec2(0,0)
 
         # ----------- specify agent and pushing object -----------
-        self.obj   = CircleObj(simulator=self, x=25, y=25, radius=4.0)
+        # self.obj   = CircleObj(simulator=self, x=25, y=25, radius=4.0)
         # self.obj   = RectangleObj(simulator=self, x=25, y=25, height=10, width=5)
-        # self.obj = PolygonalObj(simulator=self, x=25, y=25, vertices=[(6,10), (0,0), (10,0)])
+        self.obj = PolygonalObj(simulator=self, x=25, y=25, vertices=[(5,10), (0,0), (10,0)])
         self.agent = Agent(simulator=self, x=30, y=25, radius=1.0, velocity=2.0, forceLength=2.0, totalDirections=8)
 
         # Define object - goal - robot reset distances

@@ -28,7 +28,7 @@ def calc_suc_rate(data: list) -> float:
 
 # ENV
 def create_environment():
-    env = Box2DPushingEnv(smoothDraw=False, reward=RewardFunctions.PROJECTION, max_steps=100)
+    env = Box2DPushingEnv(smoothDraw=False, reward=RewardFunctions.PROJECTION, max_steps=200)
     env = GymWrapper(env)
     env = FrameStackWrapper(env, frameStackDepth=4)
     return env
@@ -81,10 +81,10 @@ def main():
         # max_replay_size=1000000,
         # importance_sampling_exponent=0.2,
         # priority_exponent=0.6,
-        # n_step=1,
+        # n_step=4,
         epsilon_start=1.0,
         epsilon_end=0.05,
-        epsilon_decay_episodes=2000,
+        epsilon_decay_episodes=20*130,
         learning_rate=1e-3,
         discount=0.95,
         # seed=1,
@@ -96,7 +96,7 @@ def main():
 
     loop = EnvironmentLoop(env, agent, logger=logger, observers=observers)
     ep_per_epoch = 20
-    for epoch_i in range(200):
+    for epoch_i in range(250):
         loop.run(num_episodes=ep_per_epoch)
         suc_rate = calc_suc_rate(loop._logger.data[-ep_per_epoch:])
         print('Epoch {}: Success Rate: {:.3f}'.format(epoch_i, suc_rate))
@@ -116,6 +116,35 @@ def main():
             - Coletar os dados e colocar em csv => plotar os gráficos 
             - Guardar os parâmetros
         - Usar esses parâmetros para retângulo        
+
+    Checkpoint do treinamento para retangulo 95.6% success: /tmp/tmpzb9ufx3z
+    Triangulo 91,6% success: /tmp/tmpnxpjpi0h
+
+    Algoritmos candidatos:
+        - PPO (Primeiro a tentar)
+        - R2D2
+        - IMPALA
+    Focar no PPO e no Rainbow. Entender onde eles se encaixam no cenário de RL.
+
+    Modificações no Env:
+        - Receber objetos por parâmetro e aleatorizar.
+        - Checar se o truncation está sendo feito corretamente.
+        - Salvar videos de episódios de eval amostrados aleatoriamente.
+        - Definir manualamente objetos e area de segurança
+        - EVitar de criar episódios que terminam com sucesso em um step
+    Modificações no Loop:
+        - Adequar ao modo de avaliação: 
+            - Ter epocas de eval de 5 - 20 episódios
+                - Qual valor de epsilon? As vezes é util para sair de loops.
+            - Rodar múltiplas vezes com diferentes random seeds
+            - Avaliar o desempenho nos últimos x epsiódios
+        - Gravar os resultados: 
+            - Treino: reward médio e success rate
+            - Eval: reward médio e success rate
+        - Log em uma pasta fácil de achar
+        - Checkpoints e snapshots
+        - Ter um script para rodar experimentos com varias random seeds.
+        - Gerar aqueles gráficos bonitos 
 
     """
 
