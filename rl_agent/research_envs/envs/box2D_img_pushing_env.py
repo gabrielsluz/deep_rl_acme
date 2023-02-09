@@ -30,7 +30,7 @@ class Box2DPushingEnv():
         # keep track of this environment state shape for outer references
         self.state_shape = self.push_simulator.state_shape
         self.observation_space = Box(low=0.0, high=1.0, shape=self.state_shape[:2], dtype=np.float32)
-        self.action_space = Discrete(8)
+        self.action_space = Discrete(self.push_simulator.agent.directions)
 
         # async cv buffers for full step rasterization
         # without frameskip

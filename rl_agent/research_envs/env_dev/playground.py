@@ -23,12 +23,6 @@ def key_to_action(key):
         action = 6
     return action
 
-"""
-Ideia:
-- Pegar keys usando cv2.waitkey
-- Só rodar a ação quando uma key for apertada.
-"""
-
 if __name__ == "__main__":
     verbose = True
     env = Box2DPushingEnv(smoothDraw=False, reward=RewardFunctions.PROJECTION)
@@ -36,7 +30,7 @@ if __name__ == "__main__":
     env.reset()
     env.render()
     while True:
-        # Input handling
+        # Input handling - requires a cv2 window running => env.render()
         dt = 1.0 / 60.0 #1.0 / 60.0
         key = 0xFF & cv2.waitKey(int(dt * 1000.0)) # Sets default key = 255
         if key == 27: break # Esc key

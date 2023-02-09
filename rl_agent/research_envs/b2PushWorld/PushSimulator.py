@@ -7,7 +7,8 @@ from research_envs.b2PushWorld.Agent import Agent
 from research_envs.b2PushWorld.Object import CircleObj, RectangleObj, PolygonalObj
 
 class PushSimulator:
-    def __init__(self, pixelsPerMeter = 20, width = 1024, height = 1024, objectiveRadius = 3.0, objProxRadius=15, d=30):
+    def __init__(self, pixelsPerMeter = 20, width = 1024, height = 1024, 
+                 objectiveRadius = 3.0, objProxRadius=15, d=30):
         # opencv is used for simple rendering to avoid
         # box2D framework
         self.pixels_per_meter = pixelsPerMeter
@@ -26,16 +27,25 @@ class PushSimulator:
         self.obj_proximity_radius = objProxRadius
         self.goal = b2Vec2(0,0)
 
-        # ----------- specify agent and pushing object -----------
+        # ----------- specify objetcs -----------
+        self.obj_l = [
+            CircleObj(simulator=self, x=25, y=25, radius=4.0),
+            RectangleObj(simulator=self, x=25, y=25, height=10, width=5),
+            PolygonalObj(simulator=self, x=25, y=25, vertices=[(5,10), (0,0), (10,0)])
+        ]
+        self.obj = self.obj_l[random.randrange(0, len(self.obj_l))]
         # self.obj   = CircleObj(simulator=self, x=25, y=25, radius=4.0)
         # self.obj   = RectangleObj(simulator=self, x=25, y=25, height=10, width=5)
-        self.obj = PolygonalObj(simulator=self, x=25, y=25, vertices=[(5,10), (0,0), (10,0)])
+        # self.obj = PolygonalObj(simulator=self, x=25, y=25, vertices=[(5,10), (0,0), (10,0)])
         self.agent = Agent(simulator=self, x=30, y=25, radius=1.0, velocity=2.0, forceLength=2.0, totalDirections=8)
 
         # Define object - goal - robot reset distances
         # self.d = d
 
     def reset(self):
+        # Picks a new object
+        self.obj = self.obj_l[random.randrange(0, len(self.obj_l))]
+
         rand_x = randint(0, int(self.width/self.pixels_per_meter))
         rand_y = randint(0, int(self.height/self.pixels_per_meter))
         self.obj.obj_rigid_body.position = (rand_x, rand_y)

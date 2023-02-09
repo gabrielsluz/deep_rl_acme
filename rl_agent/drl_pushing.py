@@ -131,7 +131,7 @@ def main():
         - Checar se o truncation está sendo feito corretamente.
         - Salvar videos de episódios de eval amostrados aleatoriamente.
         - Definir manualamente objetos e area de segurança
-        - EVitar de criar episódios que terminam com sucesso em um step
+        - EVitar de criar episódios que terminam com sucesso em um step => dificil de fazer. Deixar quieto.
     Modificações no Loop:
         - Adequar ao modo de avaliação: 
             - Ter epocas de eval de 5 - 20 episódios
