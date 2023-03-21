@@ -4,8 +4,16 @@ The goal is a position + orientation => pose
 Modifications:
 - Done condition - Done
 - Random orientation start - Done
-- Robot state
-- Reward function
+- Robot state - Done => check a little more
+- Reward function - Done
+
+Not working well, hypothesis to improve the performance:
+- Remove projection reward when object is in goal position
+- Improve reward function
+- Add distance from object to objective in the state
+- Use continous actions
+- Use a different algorithm
+
 """
 
 import numpy as np
@@ -18,7 +26,8 @@ from research_envs.b2PushWorld.PushSimulatorPose import PushSimulator
 from research_envs.cv_buffer.CvDrawBuffer import CvDrawBuffer
 
 class Box2DPushingEnv():
-    def __init__(self, smoothDraw=True, reward=RewardFunctions.FOCAL_POINTS, max_steps=100, d=30):
+    def __init__(self, smoothDraw=True, reward=RewardFunctions.PROJECTION, max_steps=100, d=30):
+        print('Box2d Pushing Environment with pose goal')
         # the timestep is used to simulate discrete steps through the
         # engine's integrator and it is calculated in seconds
         self.timestep = 1.0 / 60.0
@@ -40,7 +49,7 @@ class Box2DPushingEnv():
 
         # keep track of this environment state shape for outer references
         self.state_shape = self.push_simulator.state_shape
-        self.observation_space = Box(low=0.0, high=1.0, shape=self.state_shape[:2], dtype=np.float32)
+        self.observation_space = Box(low=0.0, high=1.0, shape=self.state_shape, dtype=np.float32)
         self.action_space = Discrete(self.push_simulator.agent.directions)
 
         # async cv buffers for full step rasterization
@@ -60,9 +69,7 @@ class Box2DPushingEnv():
     def checkSuccess(self):
         # Checks if the object is in the safe zone and in the correct orientation +- epsilon
         dist_to_objetive = self.push_simulator.distToObjective()
-        dist_to_orientation = self.push_simulator.distToOrientation()
-        # Print dist_to_orientation in degrees 0 to 360
-        print(dist_to_objetive, dist_to_orientation * 180 / np.pi )
+        dist_to_orientation = abs(self.push_simulator.distToOrientation())
         return dist_to_objetive < self.safe_zone_radius and dist_to_orientation < self.orientation_eps
 
     def normalize(self, vec):
@@ -85,100 +92,32 @@ class Box2DPushingEnv():
 
         return proj_reward
 
-    def rewardFocalPoints(self):
-        #Reward computation for the box2D push environment
-        reward = 0.0
-        time_penalty = -0.1
-
-        # projection reward
-        bd, _ = self.normalize(self.push_simulator.getObjPosition() - self.push_simulator.getLastObjPosition())
-        bo, _ = self.normalize(self.push_simulator.goal - self.push_simulator.getLastObjPosition())
-
-        # push points
-        agent_last_pos = self.push_simulator.getLastAgentPosition()
-        obj_last_pos = self.push_simulator.getLastObjPosition()
-        objective_pos = self.push_simulator.goal
-        agent_move, agent_move_norm = self.normalize(self.push_simulator.getAgentPosition() - agent_last_pos)
-        objective_to_agent, d1 = self.normalize(agent_last_pos - objective_pos)
-        objective_to_obj, d2 = self.normalize(obj_last_pos - objective_pos)
-        left = np.array([-objective_to_obj.y, objective_to_obj.x])
-        right = np.array([objective_to_obj.y, -objective_to_obj.x])
-        p1 = obj_last_pos + left * 8.0
-        p2 = obj_last_pos + right * 8.0
-        h1, h1_norm = self.normalize(p1 - agent_last_pos)
-        h2, h2_norm = self.normalize(p2 - agent_last_pos)
-        
-        if d1 < d2:
-            if h1_norm < h2_norm:
-                reward = self.computeDirectionCoef(agent_move, h1)
-            else:
-                reward = self.computeDirectionCoef(agent_move, h2)
-        else:
-            reward = self.computeDirectionCoef(bd, bo)
-        
-        dist_to_objetive = self.push_simulator.distToObjective()
-        dist_to_object = self.push_simulator.distToObject()
-        if dist_to_objetive < self.safe_zone_radius:
-            return 1.0
-        if dist_to_object > self.object_distance:
-            return -1.0
-
-        # compute total reward as the 'expected value'
-        total_reward = reward * 1.0 + time_penalty * 0.1
-        total_reward = total_reward / 2.0
-
-        return total_reward
-
-    def rewardReachingProjection(self):
-        #Reward computation for the box2D push environment
-        total_reward = 0.0
-        proj_reward = 0.0
-        reaching_reward = 0.0
-        time_penalty = -0.1
-
-        # projection reward
-        bd, _ = self.normalize(self.push_simulator.getObjPosition() - self.push_simulator.getLastObjPosition())
-        bo, _ = self.normalize(self.push_simulator.goal - self.push_simulator.getLastObjPosition())
-
-        where_it_should, _ = self.normalize(self.push_simulator.getObjPosition() - self.push_simulator.getLastAgentPosition())
-        where_it_went, _ = self.normalize(self.push_simulator.getAgentPosition() - self.push_simulator.getLastAgentPosition())
-
-        proj_reward = self.computeDirectionCoef(bd,bo)
-        reaching_reward = self.computeDirectionCoef(where_it_should,where_it_went)
-
-        dist_to_objetive = self.push_simulator.distToObjective()
-        dist_to_object = self.push_simulator.distToObject()
-        if dist_to_objetive < self.safe_zone_radius:
-            return 1.0
-        if dist_to_object > self.object_distance:
-            return -1.0
-
-        # compute total reward as the 'expected value'
-        total_reward = reaching_reward * 0.1 + proj_reward * 1.0 + time_penalty * 0.1
-        total_reward = total_reward / 3.0
-
-        return total_reward
 
     def rewardProjection(self):
         #Reward computation for the box2D push environment
         total_reward = 0.0
         proj_reward = 0.0
+        orient_reward = 0.0
         time_penalty = -0.1
 
-        # projection reward
-        bd, _ = self.normalize(self.push_simulator.getObjPosition() - self.push_simulator.getLastObjPosition())
-        bo, _ = self.normalize(self.push_simulator.goal - self.push_simulator.getLastObjPosition())
-        proj_reward = self.computeDirectionCoef(bd,bo)
+        # projection reward if object not in safe zone
+        if self.push_simulator.distToObjective() > self.safe_zone_radius:
+            bd, _ = self.normalize(self.push_simulator.getObjPosition() - self.push_simulator.getLastObjPosition())
+            bo, _ = self.normalize(self.push_simulator.goal - self.push_simulator.getLastObjPosition())
+            proj_reward = self.computeDirectionCoef(bd,bo)
 
-        dist_to_objetive = self.push_simulator.distToObjective()
+        # Orientation reward in the format of projection reward but comparing current orientation error to previous
+        # x_t-1 - x_t
+        orient_reward = abs(self.last_orient_error) - abs(self.push_simulator.distToOrientation()/np.pi)
+
         dist_to_object = self.push_simulator.distToObject()
-        if dist_to_objetive < self.safe_zone_radius:
+        if self.checkSuccess():
             return 1.0
         if dist_to_object > self.object_distance:
             return -1.0
 
         # compute total reward as the 'expected value'
-        total_reward = proj_reward * 1.0 + time_penalty * 0.1
+        total_reward = proj_reward * 1.0 + time_penalty * 0.1 + orient_reward * 1.0
         total_reward = total_reward / 2.0
 
         return total_reward
@@ -198,6 +137,7 @@ class Box2DPushingEnv():
         # set previous state for reward calculation
         self.push_simulator.agent.UpdateLastPos()
         self.push_simulator.obj.UpdateLastPos()
+        self.last_orient_error = self.push_simulator.distToOrientation()/ np.pi
 
         # wait until the agent has ended performing its step
         # push draw buffers to avoid raster gaps
@@ -210,7 +150,7 @@ class Box2DPushingEnv():
                 async_buffer = self.push_simulator.drawToBuffer()
                 img_state = self.push_simulator.getStateImg()
                 self.scene_buffer.PushFrame(async_buffer)
-                self.robot_img_state.PushFrame(img_state)
+                self.robot_img_state.PushFrame(img_state[:,:,0])
 
         # get the last state for safe computation
         observation = self.push_simulator.getStateImg()
@@ -222,7 +162,7 @@ class Box2DPushingEnv():
             async_buffer = self.push_simulator.drawToBuffer()
             img_state = self.push_simulator.getStateImg()
             self.scene_buffer.PushFrame(async_buffer)
-            self.robot_img_state.PushFrame(img_state)
+            self.robot_img_state.PushFrame(img_state[:,:,0])
 
         # check if agent broke restriction 
         dist_to_object = self.push_simulator.distToObject()
@@ -234,12 +174,12 @@ class Box2DPushingEnv():
             info = {'success': True}
 
         # compute reward
-        if self.reward_func == RewardFunctions.FOCAL_POINTS:
-            reward = self.rewardFocalPoints()
+        # if self.reward_func == RewardFunctions.FOCAL_POINTS:
+            # reward = self.rewardFocalPoints()
+        # if self.reward_func == RewardFunctions.REACHING_PROJECTION:
+            # reward = self.rewardReachingProjection()
         if self.reward_func == RewardFunctions.PROJECTION:            
             reward = self.rewardProjection()
-        if self.reward_func == RewardFunctions.REACHING_PROJECTION:
-            reward = self.rewardReachingProjection()
 
         # Check if time limit exceeded
         self.step_cnt += 1
@@ -259,7 +199,7 @@ class Box2DPushingEnv():
         # Fill render
         async_buffer = self.push_simulator.drawToBuffer()
         self.scene_buffer.PushFrame(async_buffer)
-        self.robot_img_state.PushFrame(observation)
+        self.robot_img_state.PushFrame(observation[:,:,0])
 
         # observation, info
         return observation
