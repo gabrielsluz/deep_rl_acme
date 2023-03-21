@@ -64,6 +64,9 @@ Parametros importantes:
     - min_replay_size = batch_size
 
 Próximos passos:
-- Entender o RainbowDQN
-- Função de recompensa
-- Outros algoritmos de RL
+- Experimento com 300 epocas => eps decay de 150 epocas
+- Se resultado ficar ruim: Avaliar desempenho por objeto e gravar video
+    - Checkpoint + video
+- Funcao de recompensa
+- Orientacao
+- Estudar formation control

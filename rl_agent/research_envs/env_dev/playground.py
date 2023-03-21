@@ -7,7 +7,7 @@ sys.path.append('.')
 
 import cv2
 
-from research_envs.envs.box2D_img_pushing_env import Box2DPushingEnv
+from research_envs.envs.box2D_img_pushing_pose_env import Box2DPushingEnv
 from research_envs.envs.rewards import RewardFunctions
 
 

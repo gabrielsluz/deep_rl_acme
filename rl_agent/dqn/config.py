@@ -57,6 +57,8 @@ class DQNConfig:
   epsilon_start: float = 1.0
   epsilon_end: float = 0.05
   epsilon_decay_episodes: int = 100
+
+  alternating_eps: Sequence[float] = None
   # TODO(b/191706065): update all clients and remove this field.
   seed: int = 1
 

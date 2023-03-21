@@ -24,11 +24,12 @@ from acme.agents.jax import actor_core as actor_core_lib
 from acme.agents.jax import actors
 from acme.jax import networks as networks_lib
 from acme.jax import variable_utils
+from acme.jax import utils
 
 from dqn import config as dqn_config
 from dqn import learning_lib
 from dqn import losses
-from dqn.egreedy_actor import EGreedyActor, batched_epsilon_actor_core
+from dqn.actor import EpsilonPolicy, EpsilonActorState
 
 import jax
 import jax.numpy as jnp
@@ -36,8 +37,40 @@ import optax
 import rlax
 
 
-class DQNFromConfig(agent.Agent):
-    """DQN agent.
+# Function similar to alternating_epsilons_actor_core but apply_and_sample receives an unbatched observation
+def unbatched_alternating_epsilons_actor_core(
+    policy_network: EpsilonPolicy, epsilons: Sequence[float],
+) -> actor_core_lib.ActorCore[EpsilonActorState, None]:
+  """Returns actor components for alternating epsilon exploration.
+  Args:
+    policy_network: A feedforward action selecting function.
+    epsilons: epsilons to alternate per-episode for epsilon-greedy exploration.
+  Returns:
+    A feedforward policy.
+  """
+  epsilons = jnp.array(epsilons)
+
+  def apply_and_sample(params: networks_lib.Params,
+                       observation: networks_lib.Observation,
+                       state: EpsilonActorState):
+    random_key, key = jax.random.split(state.rng)
+    observation = utils.add_batch_dim(observation)
+    action = utils.squeeze_batch_dim(policy_network(params, key, observation, state.epsilon))
+    return (action.astype(jnp.int64),
+            EpsilonActorState(rng=random_key, epsilon=state.epsilon))
+
+  def policy_init(random_key: networks_lib.PRNGKey):
+    random_key, key = jax.random.split(random_key)
+    epsilon = jax.random.choice(key, epsilons)
+    return EpsilonActorState(rng=random_key, epsilon=epsilon)
+
+  return actor_core_lib.ActorCore(
+      init=policy_init, select_action=apply_and_sample,
+      get_extras=lambda _: None)
+
+
+class AltDQN(agent.Agent):
+    """DQN agent. With alternating epsilons
     
     This implements a single-process DQN agent. This is a simple Q-learning
     algorithm that inserts N-step transitions into a replay buffer, and
@@ -89,15 +122,12 @@ class DQNFromConfig(agent.Agent):
                 observation: jnp.ndarray, epsilon: float) -> jnp.ndarray:
             action_values = network.apply(params, observation)
             return rlax.epsilon_greedy(epsilon).sample(key, action_values)
+        self._policy = policy
 
-        actor_core = batched_epsilon_actor_core(policy)
+        actor_core = unbatched_alternating_epsilons_actor_core(policy, config.alternating_eps)
         variable_client = variable_utils.VariableClient(learner, '')
-        actor = EGreedyActor(
-            actor_core, 
-            config.epsilon_start,
-            config.epsilon_end,
-            config.epsilon_decay_episodes,
-            key_actor, variable_client, reverb_replay.adder)
+        actor = actors.GenericActor(
+            actor_core, key_actor, variable_client, reverb_replay.adder)
 
         super().__init__(
             actor=actor,
@@ -105,67 +135,9 @@ class DQNFromConfig(agent.Agent):
             min_observations=max(config.batch_size, config.min_replay_size),
             observations_per_step=config.observations_per_step,
         )
-    # Agent -> EGreedyActor -> ActorCore
-    # Interagir com o agent => set_epsilon/get_epsilon
-    # Pode usar o Agent normal, pois o actor recebe a observation e o ActorCore que recebe o state.
-    # EGreedyActor => Ajustar funcoes para manter o epsilon e dacair em uma taxa
-    # ActorCore => política deve receber estado como entrada => EpsilonState. 
-    #   Com base na  alternating_epsilons_actor_core
 
 
-class DQN(DQNFromConfig):
-  """DQN agent.
-
-  We are in the process of migrating towards a more modular agent configuration.
-  This is maintained now for compatibility.
-  """
-
-  def __init__(
-      self,
-      environment_spec: specs.EnvironmentSpec,
-      network: networks_lib.FeedForwardNetwork,
-      batch_size: int = 256,
-      prefetch_size: int = 4,
-      target_update_period: int = 100,
-      observations_per_step: float = 1.0,
-      min_replay_size: int = 1000,
-      max_replay_size: int = 1000000,
-      importance_sampling_exponent: float = 0.2,
-      priority_exponent: float = 0.6,
-      n_step: int = 5,
-      epsilon_start: float = 1.0,
-      epsilon_end: float = 0.05,
-      epsilon_decay_episodes: int = 100,
-      learning_rate: float = 1e-3,
-      discount: float = 0.99,
-      seed: int = 1,
-  ):
-    config = dqn_config.DQNConfig(
-        batch_size=batch_size,
-        prefetch_size=prefetch_size,
-        target_update_period=target_update_period,
-        observations_per_step=observations_per_step,
-        min_replay_size=min_replay_size,
-        max_replay_size=max_replay_size,
-        importance_sampling_exponent=importance_sampling_exponent,
-        priority_exponent=priority_exponent,
-        n_step=n_step,
-        epsilon_start=epsilon_start,
-        epsilon_end=epsilon_end,
-        epsilon_decay_episodes=epsilon_decay_episodes,
-        learning_rate=learning_rate,
-        discount=discount,
-        seed=seed,
-    )
-    super().__init__(
-        environment_spec=environment_spec,
-        network=network,
-        config=config,
-    )
-
-
-
-class DQNEval(agent.Agent):
+class AltDQNEval(agent.Agent):
     """
     Only for evaluating a policy.
     Sets epsilon to fixed value
@@ -174,14 +146,16 @@ class DQNEval(agent.Agent):
     """
     def __init__(
         self,
-        dqn: DQN,
+        dqn: AltDQN,
         epsilon: float
     ):
-        actor = dqn._actor # EGreedyActor
-        actor.epsilon = epsilon
-        actor.epsilon_decay = 0.0
-        actor.epsilon_end = epsilon
         learner = dqn._learner
+        _, key_actor = jax.random.split(jax.random.PRNGKey(1))
+        actor_core = unbatched_alternating_epsilons_actor_core(dqn._policy, [epsilon])
+        variable_client = variable_utils.VariableClient(learner, '')
+        actor = actors.GenericActor(
+            actor_core, key_actor, variable_client, None)
+
         super().__init__(
             actor=actor,
             learner=learner,

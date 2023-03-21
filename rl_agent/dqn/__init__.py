@@ -17,7 +17,8 @@
 
 from dqn.actor import behavior_policy
 from dqn.actor import default_behavior_policy
-from dqn.agent import DQN
+from dqn.agent import DQN, DQNEval
+from dqn.alternating_eps_agent import AltDQN, AltDQNEval
 from dqn.builder import DQNBuilder
 from dqn.config import DQNConfig
 from dqn.learning import DQNLearner

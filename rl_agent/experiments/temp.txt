@@ -1,0 +1,24 @@
+(drl) MBP-de-Zeba:experiments zeba$ python print_results.py 1
+Eval success rate =  0.1455
+(drl) MBP-de-Zeba:experiments zeba$ python print_results.py 2
+Eval success rate =  0.17503966155473294
+(drl) MBP-de-Zeba:experiments zeba$ python print_results.py 2
+Eval success rate =  0.2325
+(drl) MBP-de-Zeba:experiments zeba$ python print_results.py 2
+Eval success rate =  0.58
+(drl) MBP-de-Zeba:experiments zeba$ python print_results.py 3
+Eval success rate =  0.47
+(drl) MBP-de-Zeba:experiments zeba$ python print_results.py 4
+Eval success rate =  0.17
+(drl) MBP-de-Zeba:experiments zeba$ python print_results.py low_eps_01
+Eval success rate =  0.19
+(drl) MBP-de-Zeba:experiments zeba$ python print_results.py alt_eps_1
+Eval success rate =  0.32
+(drl) MBP-de-Zeba:experiments zeba$ python print_results.py alt_eps_2
+Eval success rate =  0.19
+(drl) MBP-de-Zeba:experiments zeba$ python print_results.py discount_99
+Eval success rate =  0.12
+(drl) MBP-de-Zeba:experiments zeba$ python print_results.py obs_per_step_40
+Eval success rate =  0.77
+(drl) MBP-de-Zeba:experiments zeba$ python print_results.py obs_per_step_30
+Eval success rate =  0.66
