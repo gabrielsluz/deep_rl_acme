@@ -53,8 +53,8 @@ Checklist:
         - Parâmetros afetados por tornar a rede neural maior: 
             - learning_rate, update_period, batch_size. E talvez outros em segunda ordem.
     - LeNet-5 : Melhorou resultado em 100 epocas de 64% para 82%
-
-
+- Agente:
+    - Para conseguir um controle bem fino, talvez seja necessário usar ações contínuas.
 
 Melhorias:
 - Buscar melhorias algoritmicas para lidar com recompensas esparsas e de longo prazo.

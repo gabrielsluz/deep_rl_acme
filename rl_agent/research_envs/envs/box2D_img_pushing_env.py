@@ -183,13 +183,13 @@ class Box2DPushingEnv():
         # progress reward
         last_dist = (self.push_simulator.goal - self.push_simulator.getLastObjPosition()).length
         cur_dist = (self.push_simulator.goal - self.push_simulator.getObjPosition()).length
-        progress_reward = last_dist - cur_dist
-        # Clip progress reward to [-1.0, 1.0]
-        # Try to scale correctly the reward        
+        # Tries to scale between -1 and +1, but also clips it
+        max_gain = 2.0 # Heuristic, should be adapted to the environment
+        progress_reward = (last_dist - cur_dist) / max_gain  
         progress_reward = max(min(progress_reward, 1.0), -1.0)
-        # compute total reward
-        total_reward = progress_reward + time_penalty
-
+        
+        # compute total reward, weigthing to give more importance to success or death
+        total_reward = progress_reward*0.5 + time_penalty
         return total_reward
 
     def getRandomValidAction(self):

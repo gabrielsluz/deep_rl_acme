@@ -141,14 +141,6 @@ class PushSimulator:
         cv2.line(screen, agent_center_point, obj_g_screen, color=(1,0,0,0), thickness=5)
         output_img = np.zeros(shape=self.state_shape, dtype=np.float32)
         output_img = cv2.resize(screen, dsize=(self.state_shape[0], self.state_shape[1]), interpolation = cv2.INTER_AREA)
-        
-        '''
-        Enhance each channel and clip between 0 and 1 to 
-        avoid noise in the network inputs
-        '''
-        # output_img[:,:,0] = np.clip(output_img[:,:,0] * 1000.0, 0, 1.0)
-        #output_img[:,:,1] = np.clip(output_img[:,:,1] * 1000.0, 0, 1.0)
-        #output_img[:,:,2] = np.clip(output_img[:,:,2] * 1000.0, 0, 1.0)
 
         '''
         Make objective direction more visible over obstacle
@@ -165,15 +157,6 @@ class PushSimulator:
         output_gray[8,8] = 1.0
 
         return output_gray
-        # # Add channels
-        # output_img = np.zeros(shape=self.state_shape, dtype=np.float32)
-        # output_img[:,:,0] = output_gray
-        # # Distance from object to goal
-        # output_img[:,:,1] = self.distToObjective() / max(
-        #     self.width/self.pixels_per_meter, self.height/self.pixels_per_meter)
-        # # Distance from agent to object
-        # output_img[:,:,2] = self.distToObject() / self.obj_proximity_radius
-        # return output_img
 
     def drawToBuffer(self):
         # clear previous buffer
