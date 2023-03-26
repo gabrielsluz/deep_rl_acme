@@ -25,7 +25,7 @@ def key_to_action(key):
 
 if __name__ == "__main__":
     verbose = True
-    env = Box2DPushingEnv(smoothDraw=False, reward=RewardFunctions.PROJECTION)
+    env = Box2DPushingEnv(smoothDraw=False, reward=RewardFunctions.PROGRESS)
     
     env.reset()
     env.render()

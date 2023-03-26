@@ -19,7 +19,7 @@ class Box2DPushingEnv():
         
         # restrictions 
         self.object_distance = 12
-        self.safe_zone_radius = 2
+        self.safe_zone_radius = 1
 
         # simulator initialization
         self.push_simulator = PushSimulator(
@@ -29,7 +29,7 @@ class Box2DPushingEnv():
 
         # keep track of this environment state shape for outer references
         self.state_shape = self.push_simulator.state_shape
-        self.observation_space = Box(low=0.0, high=1.0, shape=self.state_shape[:2], dtype=np.float32)
+        self.observation_space = Box(low=0.0, high=1.0, shape=self.state_shape, dtype=np.float32)
         self.action_space = Discrete(self.push_simulator.agent.directions)
 
         # async cv buffers for full step rasterization
@@ -164,6 +164,34 @@ class Box2DPushingEnv():
 
         return total_reward
 
+    def rewardProgress(self):
+        # Reward based on the progress of the agent towards the goal
+        # Limits the maximum reward to [-1.0, 1.0] (except for success or death)
+        total_reward = 0.0
+        progress_reward = 0.0
+        success_reward = 1.0
+        death_penalty = -1.0
+        time_penalty = -0.01
+
+        dist_to_objetive = self.push_simulator.distToObjective()
+        dist_to_object = self.push_simulator.distToObject()
+        if dist_to_objetive < self.safe_zone_radius:
+            return success_reward
+        if dist_to_object > self.object_distance:
+            return death_penalty
+
+        # progress reward
+        last_dist = (self.push_simulator.goal - self.push_simulator.getLastObjPosition()).length
+        cur_dist = (self.push_simulator.goal - self.push_simulator.getObjPosition()).length
+        progress_reward = last_dist - cur_dist
+        # Clip progress reward to [-1.0, 1.0]
+        # Try to scale correctly the reward        
+        progress_reward = max(min(progress_reward, 1.0), -1.0)
+        # compute total reward
+        total_reward = progress_reward + time_penalty
+
+        return total_reward
+
     def getRandomValidAction(self):
         return self.push_simulator.agent.GetRandomValidAction()
 
@@ -223,6 +251,8 @@ class Box2DPushingEnv():
             reward = self.rewardProjection()
         if self.reward_func == RewardFunctions.REACHING_PROJECTION:
             reward = self.rewardReachingProjection()
+        if self.reward_func == RewardFunctions.PROGRESS:
+            reward = self.rewardProgress()
 
         # Check if time limit exceeded
         self.step_cnt += 1

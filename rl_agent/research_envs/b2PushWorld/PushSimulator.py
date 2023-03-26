@@ -26,7 +26,6 @@ class PushSimulator:
         self.goal_radius = objectiveRadius
         self.obj_proximity_radius = objProxRadius
         self.goal = b2Vec2(0,0)
-        self.goal_orientation = 0.0
 
         # ----------- specify objetcs -----------
         self.obj_l = [
@@ -49,7 +48,6 @@ class PushSimulator:
         rand_y = randint(0, int(self.height/self.pixels_per_meter))
         self.goal.x = rand_x
         self.goal.y = rand_y 
-        self.goal_orientation = random.uniform(0, 2*np.pi)
 
         # Picks a new object
         self.obj = self.obj_l[random.randrange(0, len(self.obj_l))]
@@ -104,21 +102,7 @@ class PushSimulator:
         return (self.goal - self.obj.obj_rigid_body.position).length
 
     def distToObject(self):
-        return (self.agent.agent_rigid_body.position - self.obj.obj_rigid_body.position).length
-
-    def distToOrientation(self):
-        if self.obj.obj_type == 'Circle': # Does not work well with circles
-            return 0.0
-        else:
-            # Calculate the angle between the object and the goal
-            obj_angle = self.obj.obj_rigid_body.angle % (2*np.pi)
-            angle_diff = self.goal_orientation - obj_angle
-            if angle_diff > np.pi:
-                angle_diff -= 2*np.pi
-            elif angle_diff < -np.pi:
-                angle_diff += 2*np.pi
-            return abs(angle_diff)
-            
+        return (self.agent.agent_rigid_body.position - self.obj.obj_rigid_body.position).length   
 
     def update(self, timeStep, velocity_iterator, position_iterator):
         self.agent.Update()
@@ -181,6 +165,15 @@ class PushSimulator:
         output_gray[8,8] = 1.0
 
         return output_gray
+        # # Add channels
+        # output_img = np.zeros(shape=self.state_shape, dtype=np.float32)
+        # output_img[:,:,0] = output_gray
+        # # Distance from object to goal
+        # output_img[:,:,1] = self.distToObjective() / max(
+        #     self.width/self.pixels_per_meter, self.height/self.pixels_per_meter)
+        # # Distance from agent to object
+        # output_img[:,:,2] = self.distToObject() / self.obj_proximity_radius
+        # return output_img
 
     def drawToBuffer(self):
         # clear previous buffer

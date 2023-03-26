@@ -7,3 +7,4 @@ class RewardFunctions(Enum):
     FOCAL_POINTS = 0
     PROJECTION = 1
     REACHING_PROJECTION = 2
+    PROGRESS = 3

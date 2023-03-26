@@ -33,8 +33,6 @@ Falta:
     - Tensorboard
 - Integrar com singularity VM
 - Rodar no Verlab => talvez precise de um admin para mudar a permissão da sandbox. Mas e se eu fizer a transferência de arquivos e mantar o container .sif direto para meu home?
-- Integrar com env do Allyson
-- Visualizar robo mexendo => vai ser melhor na minha máquina local? Ou no container?
 
 <!-- Environment:
 ```

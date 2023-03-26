@@ -6,9 +6,9 @@ Checklist:
         - Explicação: o objeto continua se movendo, bem pouquinho, na direção.
         - Solução: usar a magnitude do movimento também. => Piorou o resultado.
     - Recompensa de sucesso é pequena: 1.00. Enquanto acertar a direção é 0.33. E penalidade de tempo dá -0.09.
-        - Quero aumenta-la para valorizar mais o sucesso.
+        - Problema talvez quando o agente encosta no objeto na direção errada => toma grande recompensa negativa.
     - Penalidade de morte tem que ser alta => senão vale mais a pena se matar que ganhar uma série de recomepensas
-        negativas.
+        negativas. => ou deixar  a penalidade de tempo baixa.
     - Testar no playground como ela se comporta e se ele direciona para o melhor caminho.
         - Reward shaping
     - Resultados:
@@ -39,8 +39,8 @@ Checklist:
     - "Curriculum learning" => épocas iniciais com safe zone maior, ir apertando a gradualmente até chegar na precisão alvo.
         - Fazer os primeiros experimentos sempre com uma safe zone maior para que a tarefa seja factível. 
     - 100 epocas para safe zone = 1, dá 64% de sucesso
-    - 300 épocas: 
-    - n-step => fazer um teste com n = 3.
+    - 300 épocas: 91% (com max_Steps = 400 e eps= 0.05), 85% no jeito tradicional.
+    - n-step => fazer um teste com n = 3. => piorou: 58% comparado com 64%
     - Experimentar com os parâmetros do replay
 - Avaliação:
     - Usar epsilon?
@@ -49,7 +49,10 @@ Checklist:
     - max_steps
     
 - Rede neural:
-    - Funcionou bem com uma rede pequena.
+    - Funcionou bem com uma rede pequena, mas vale a pena tentar melhorar, pois é a alma do algoritmo.
+        - Parâmetros afetados por tornar a rede neural maior: 
+            - learning_rate, update_period, batch_size. E talvez outros em segunda ordem.
+    - LeNet-5 : Melhorou resultado em 100 epocas de 64% para 82%
 
 
 
