@@ -55,7 +55,9 @@ Checklist:
     - LeNet-5 : Melhorou resultado em 100 epocas de 64% para 82%
 - Agente:
     - Para conseguir um controle bem fino, talvez seja necessário usar ações contínuas.
+    - Ou reduzir a força da ação e auemntar o número de ações => deve precisar de um treino mais lomgo, mas dá maior
+        precisão para cada ação.
 
 Melhorias:
-- Buscar melhorias algoritmicas para lidar com recompensas esparsas e de longo prazo.
+- Buscar melhorias algoritmicas para lidar com recompensas esparsas e de longo prazo? => não parece ser o problema.
 - Simplificar função de recompensa e condição de morte?

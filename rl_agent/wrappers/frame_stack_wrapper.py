@@ -28,7 +28,8 @@ class FrameStack:
 
     def assemblyState(self):
         state_stack = np.zeros(shape=self.frame_stack_shape, dtype=self.dtype)
-        for i, state in enumerate(self.frame_stack):
+        # Iterate over the deque in reverse order so that the most recent state is at the start
+        for i, state in enumerate(reversed(self.frame_stack)):
             state_stack[:,:,i*self.state_shape[2]:(i+1)*self.state_shape[2]] = state
         return state_stack
 
