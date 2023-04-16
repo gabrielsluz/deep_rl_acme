@@ -53,6 +53,9 @@ Checklist:
         - Parâmetros afetados por tornar a rede neural maior: 
             - learning_rate, update_period, batch_size. E talvez outros em segunda ordem.
     - LeNet-5 : Melhorou resultado em 100 epocas de 64% para 82%
+    - Modernizar a arquitetura => copiar ideias de CNNs mais recentes, como BatchNorm, arquitetura, conexões residuais.
+        - BatchNorm
+        - Conexões residuais
 - Agente:
     - Para conseguir um controle bem fino, talvez seja necessário usar ações contínuas.
     - Ou reduzir a força da ação e auemntar o número de ações => deve precisar de um treino mais lomgo, mas dá maior
@@ -61,3 +64,10 @@ Checklist:
 Melhorias:
 - Buscar melhorias algoritmicas para lidar com recompensas esparsas e de longo prazo? => não parece ser o problema.
 - Simplificar função de recompensa e condição de morte?
+
+Candidatos a Próximos passos:
+- Rodar em GPU
+- Rodar PPO
+- Revisão da literatura em pushing e orientação
+- Mudar para Stable baselines => Pytorch => mais fácil de testar arquiteuras e algoritmos. + Mac M1 (vale a pena?)
+    - O DQN implementado parece bem ruim. Perdemos Jax, reverb e rlax.
