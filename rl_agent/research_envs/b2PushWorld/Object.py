@@ -1,4 +1,4 @@
-from Box2D import b2CircleShape, b2PolygonShape, b2FixtureDef, b2Vec2
+from Box2D import b2CircleShape, b2PolygonShape, b2FixtureDef, b2Vec2, b2ChainShape
 import cv2
 import math
 import numpy as np
@@ -97,6 +97,51 @@ class PolygonalObj(Object):
         cv2.fillPoly(image, [np.array(vertices)], color)
 
 
-# Poligono Concavo => feito de partes convexas. Receber lista de lista de vertices.
+# class ChainShapeObj(Object):
+#     def __init__(self, simulator = None, x = 0, y = 0, vertices=[]):
+#         # Vertices in counterclockwise
+#         # Adjusts such that centroid is in the center (0,0)
+#         self.obj_type = 'ChainShape'
+#         aux_obj_shape = b2ChainShape(vertices=vertices)
+#         centroid = self.compute_centroid(aux_obj_shape)
+#         vertices = [(v[0]-centroid[0], v[1]-centroid[1]) for v in vertices]
+#         self.obj_shape = b2ChainShape(vertices=vertices)
+#         super().__init__(simulator, x, y)
+    
+#     def compute_centroid(self, obj_shape):
+#         # Compute centroid following https://en.wikipedia.org/wiki/Centroid#Of_a_polygon
+#         # Assumes vertices are in counterclockwise order
+#         # Polygon can be concave
+#         # Polygon cannot have holes or self intersection
+#         # Polygon must be simple
+#         centroid = (0, 0)
+#         area = 0
+#         for i in range(len(obj_shape.vertices)):
+#             v1 = obj_shape.vertices[i]
+#             v2 = obj_shape.vertices[(i+1)%len(obj_shape.vertices)]
+#             aux = v1[0]*v2[1] - v2[0]*v1[1]
+#             area += aux
+#             centroid = (centroid[0] + (v1[0] + v2[0])*aux, centroid[1] + (v1[1] + v2[1])*aux)
+#         area *= 0.5
+#         centroid = (centroid[0]/(6*area), centroid[1]/(6*area))
+#         return centroid
+
+
+#     def Draw(self, pixels_per_meter, image, color, thickness):
+#         vertices = [(self.obj_rigid_body.transform * v) for v in self.obj_rigid_body.fixtures[0].shape.vertices]
+#         vertices = [self.worldToScreen(v, pixels_per_meter) for v in vertices]
+#         cv2.fillPoly(image, [np.array(vertices)], color)
+
+#     def DrawInPos(self, screen_pos, pixels_per_meter, image, color, thickness):
+#         # Only rotate
+#         vertices = [(self.obj_rigid_body.transform.q * v) for v in self.obj_rigid_body.fixtures[0].shape.vertices]
+#         vertices = [self.worldToScreen(v, pixels_per_meter) for v in vertices]
+#         # Translate
+#         vertices = [(v[0]+screen_pos[0], v[1]+screen_pos[1]) for v in vertices]
+#         cv2.fillPoly(image, [np.array(vertices)], color)
+
+# Poligono Concavo => feito de partes convexas. Receber lista de lista de vertices. Ou b2ChainShape
+# O chain não rotaciona. => talvez setar inertia e mass corretamente.
+# Testar com um corpo com joints
 # Fazer o draw de cada poligon separadamente
-# Como calcular o centroid?
+# Como calcular o centroid? => passar por parâmetro. Ou já passar centralizada.

@@ -31,7 +31,7 @@ class PushSimulator:
         self.obj_l = [
             CircleObj(simulator=self, x=25, y=25, radius=4.0),
             RectangleObj(simulator=self, x=25, y=25, height=10, width=5),
-            PolygonalObj(simulator=self, x=25, y=25, vertices=[(5,10), (0,0), (10,0)])
+            PolygonalObj(simulator=self, x=25, y=25, vertices=[(5,10), (0,0), (10,0)]),
         ]
         self.obj = self.obj_l[random.randrange(0, len(self.obj_l))]
         # self.obj   = CircleObj(simulator=self, x=25, y=25, radius=4.0)

@@ -34,6 +34,7 @@ import jax
 import jax.numpy as jnp
 import optax
 import rlax
+import numpy as np
 
 
 class DQNFromConfig(agent.Agent):
@@ -125,6 +126,7 @@ class DQN(DQNFromConfig):
       environment_spec: specs.EnvironmentSpec,
       network: networks_lib.FeedForwardNetwork,
       batch_size: int = 256,
+      max_gradient_norm: float = np.inf,
       prefetch_size: int = 4,
       target_update_period: int = 100,
       observations_per_step: float = 1.0,
@@ -142,6 +144,7 @@ class DQN(DQNFromConfig):
   ):
     config = dqn_config.DQNConfig(
         batch_size=batch_size,
+        max_gradient_norm=max_gradient_norm,
         prefetch_size=prefetch_size,
         target_update_period=target_update_period,
         observations_per_step=observations_per_step,

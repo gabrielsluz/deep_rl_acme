@@ -70,6 +70,7 @@ def main():
     action_size = np.prod(action_spec.shape, dtype=int)
     # print(action_spec, action_size)
 
+
     # AGENT
     def network_fn(obs):
         img_net = hk.Sequential([
@@ -82,7 +83,8 @@ def main():
             hk.Flatten()
         ])
         aux_net = hk.Sequential([
-            hk.Linear(8)
+            hk.Linear(8),
+            jax.nn.relu
         ])
         final_net = hk.Sequential([
             hk.Linear(120),

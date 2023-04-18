@@ -19,7 +19,7 @@ class Box2DPushingEnv():
         
         # restrictions 
         self.object_distance = 12
-        self.safe_zone_radius = 1
+        self.safe_zone_radius = 2
 
         # simulator initialization
         self.push_simulator = PushSimulator(
@@ -175,7 +175,7 @@ class Box2DPushingEnv():
         # Limits the maximum reward to [-1.0, 1.0] (except for success or death)
         total_reward = 0.0
         progress_reward = 0.0
-        success_reward = 1.0
+        success_reward = 2.0
         death_penalty = -1.0
         time_penalty = -0.01
 

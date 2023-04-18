@@ -7,7 +7,7 @@ sys.path.append('.')
 
 import cv2
 
-from research_envs.envs.box2D_img_pushing_env import Box2DPushingEnv
+from research_envs.envs.box2D_img_pushing_pose_env import Box2DPushingEnv
 from research_envs.envs.rewards import RewardFunctions
 
 
@@ -26,6 +26,8 @@ def key_to_action(key):
 if __name__ == "__main__":
     verbose = True
     env = Box2DPushingEnv(smoothDraw=False, reward=RewardFunctions.PROGRESS)
+    for obj in env.push_simulator.obj_l:
+        print(obj.obj_rigid_body.mass, obj.obj_rigid_body.inertia)
     
     env.reset()
     env.render()
@@ -38,6 +40,7 @@ if __name__ == "__main__":
         action = key_to_action(key)
         if action != -1:
             next_state, reward, done, info = env.step(action)
+            print(next_state['aux_info'])
             if verbose:
                 print('Reward: {:.2f} Done: {} Info: {}'.format(reward, done, info))
             env.render()

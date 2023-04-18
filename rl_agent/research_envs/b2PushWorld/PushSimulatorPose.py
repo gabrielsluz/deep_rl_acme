@@ -15,7 +15,7 @@ class PushSimulator:
         self.width = width
         self.height = height
         self.screen = np.zeros(shape=(self.height, self.width), dtype=np.float32)
-        self.state_shape = (16,16,2)
+        self.state_shape = (16,16,1)
         self.observed_dist_shape = (320,320,3)
 
         # ----------- world creation ----------
@@ -30,14 +30,11 @@ class PushSimulator:
 
         # ----------- specify objetcs -----------
         self.obj_l = [
-            # CircleObj(simulator=self, x=25, y=25, radius=4.0),
+            CircleObj(simulator=self, x=25, y=25, radius=4.0),
             RectangleObj(simulator=self, x=25, y=25, height=10, width=5),
-            # PolygonalObj(simulator=self, x=25, y=25, vertices=[(5,10), (0,0), (10,0)])
+            PolygonalObj(simulator=self, x=25, y=25, vertices=[(5,10), (0,0), (10,0)])
         ]
         self.obj = self.obj_l[random.randrange(0, len(self.obj_l))]
-        # self.obj   = CircleObj(simulator=self, x=25, y=25, radius=4.0)
-        # self.obj   = RectangleObj(simulator=self, x=25, y=25, height=10, width=5)
-        # self.obj = PolygonalObj(simulator=self, x=25, y=25, vertices=[(5,10), (0,0), (10,0)])
         self.agent = Agent(simulator=self, x=30, y=25, radius=1.0, velocity=2.0, forceLength=2.0, totalDirections=8)
 
         # Define object - goal - robot reset distances
@@ -171,12 +168,8 @@ class PushSimulator:
         output_gray[7,8] = 1.0
         output_gray[8,7] = 1.0
         output_gray[8,8] = 1.0
-
-        # Add channel with object orientation in reference to goal
-        output_img = np.zeros(shape=self.state_shape, dtype=np.float32)
-        output_img[:,:,0] = output_gray
-        output_img[:,:,1] = self.distToOrientation() / np.pi
-        return output_img
+        
+        return output_gray
 
     def drawArrow(self, image, world_pos, angle, len, color):
         start_pos = self.worldToScreen(world_pos)

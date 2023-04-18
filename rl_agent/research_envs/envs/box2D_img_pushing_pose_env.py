@@ -19,7 +19,7 @@ Not working well, hypothesis to improve the performance:
 import numpy as np
 import cv2
 from threading import Thread
-from gym.spaces import Box, Discrete
+from gym.spaces import Box, Discrete, Dict
 
 from research_envs.envs.rewards import RewardFunctions
 from research_envs.b2PushWorld.PushSimulatorPose import PushSimulator
@@ -38,8 +38,8 @@ class Box2DPushingEnv():
         
         # restrictions 
         self.object_distance = 12
-        self.safe_zone_radius = 5
-        self.orientation_eps = 0.174533 # 10 degrees
+        self.safe_zone_radius = 2
+        self.orientation_eps = 0.174533 *2 # 10 degrees
 
         # simulator initialization
         self.push_simulator = PushSimulator(
@@ -49,20 +49,27 @@ class Box2DPushingEnv():
 
         # keep track of this environment state shape for outer references
         self.state_shape = self.push_simulator.state_shape
-        self.observation_space = Box(low=-1.0, high=1.0, shape=self.state_shape, dtype=np.float32)
+        self.observation_space = Dict({	
+            'state_img': Box(low=0.0, high=1.0, shape=self.state_shape, dtype=np.float32),	
+            'aux_info': Box(low=-np.inf, high=np.inf, shape=(2,), dtype=np.float32)})
         self.action_space = Discrete(self.push_simulator.agent.directions)
+        self.max_objective_dist = np.sqrt(	
+            (self.push_simulator.width/self.push_simulator.pixels_per_meter)** 2 + 	
+            (self.push_simulator.height/self.push_simulator.pixels_per_meter)** 2)	
+
 
         # async cv buffers for full step rasterization
         # without frameskip
         self.scene_buffer = CvDrawBuffer(window_name="Push Simulation", resolution=(1024,1024))
-        self.robot_img_state = CvDrawBuffer(window_name="Image State", resolution=(320,320))
+        # self.robot_img_state = CvDrawBuffer(window_name="Image State", resolution=(320,320))
+        self.robot_img_state = CvDrawBuffer(window_name="Image State", resolution=(16,16))
 
         if self.smooth_draw == True:
             self.draw_thread = Thread(target=self.threadedRendering)
             self.draw_thread.start()
 
         self.reward_func = reward
-        # End epsisode after max_steps
+        # End episode after max_steps
         self.step_cnt = 0
         self.max_steps = max_steps
 
@@ -122,12 +129,52 @@ class Box2DPushingEnv():
 
         return total_reward
 
+    def rewardProgress(self):	
+        # Reward based on the progress of the agent towards the goal	
+        # Limits the maximum reward to [-1.0, 1.0] (except for success or death)	
+        total_reward = 0.0	
+        progress_reward = 0.0
+        orient_reward = 0.0	
+        success_reward = 2.0	
+        death_penalty = -1.0	
+        time_penalty = -0.01	
+
+        dist_to_object = self.push_simulator.distToObject()	
+        if self.checkSuccess():
+            return success_reward	
+        if dist_to_object > self.object_distance:	
+            return death_penalty	
+        # progress reward	
+        last_dist = (self.push_simulator.goal - self.push_simulator.getLastObjPosition()).length	
+        cur_dist = (self.push_simulator.goal - self.push_simulator.getObjPosition()).length	
+        # Tries to scale between -1 and +1, but also clips it	
+        max_gain = 2.0 # Heuristic, should be adapted to the environment	
+        progress_reward = (last_dist - cur_dist) / max_gain  	
+        progress_reward = max(min(progress_reward, 1.0), -1.0)	
+
+        orient_reward = abs(self.last_orient_error) - abs(self.push_simulator.distToOrientation()/np.pi)
+        	
+        # compute total reward, weigthing to give more importance to success or death	
+        total_reward = progress_reward*0.5 + orient_reward*0.5 + time_penalty	
+        return total_reward
+
     def getRandomValidAction(self):
         return self.push_simulator.agent.GetRandomValidAction()
 
+    def getObservation(self):	
+        obs = {}	
+        obs['state_img'] = self.push_simulator.getStateImg()	
+        obs['aux_info'] = np.zeros(shape=(2,), dtype=np.float32)	
+        # obs['aux_info'][0] = self.push_simulator.distToObject() / self.push_simulator.obj_proximity_radius	
+        # obs['aux_info'][1] = self.push_simulator.distToObjective() / self.max_objective_dist	
+        # obs['aux_info'][2] = self.push_simulator.distToOrientation() / np.pi	
+        obs['aux_info'][0] = self.push_simulator.distToObjective() / self.max_objective_dist	
+        obs['aux_info'][1] = self.push_simulator.distToOrientation() / np.pi	
+        return obs
+
     def step(self, action):
         # return variables
-        observation      = []
+        observation      = {}
         reward           = 0.0
         done             = False
         info             = {'success': False, 'TimeLimit.truncated': False}
@@ -150,10 +197,10 @@ class Box2DPushingEnv():
                 async_buffer = self.push_simulator.drawToBuffer()
                 img_state = self.push_simulator.getStateImg()
                 self.scene_buffer.PushFrame(async_buffer)
-                self.robot_img_state.PushFrame(img_state[:,:,0])
+                self.robot_img_state.PushFrame(img_state)
 
         # get the last state for safe computation
-        observation = self.push_simulator.getStateImg()
+        observation = self.getObservation()
 
         # if smooth draw is off, get 
         # the framebuffer only after performing
@@ -162,7 +209,7 @@ class Box2DPushingEnv():
             async_buffer = self.push_simulator.drawToBuffer()
             img_state = self.push_simulator.getStateImg()
             self.scene_buffer.PushFrame(async_buffer)
-            self.robot_img_state.PushFrame(img_state[:,:,0])
+            self.robot_img_state.PushFrame(img_state)
 
         # check if agent broke restriction 
         dist_to_object = self.push_simulator.distToObject()
@@ -180,6 +227,8 @@ class Box2DPushingEnv():
             # reward = self.rewardReachingProjection()
         if self.reward_func == RewardFunctions.PROJECTION:            
             reward = self.rewardProjection()
+        if self.reward_func == RewardFunctions.PROGRESS:            
+            reward = self.rewardProgress()
 
         # Check if time limit exceeded
         self.step_cnt += 1
@@ -194,12 +243,12 @@ class Box2DPushingEnv():
         self.step_cnt = 0
 
         # get new observation for a new epoch or simulation
-        observation = self.push_simulator.getStateImg()
+        observation = self.getObservation()
 
         # Fill render
         async_buffer = self.push_simulator.drawToBuffer()
         self.scene_buffer.PushFrame(async_buffer)
-        self.robot_img_state.PushFrame(observation[:,:,0])
+        self.robot_img_state.PushFrame(observation['state_img'])
 
         # observation, info
         return observation
