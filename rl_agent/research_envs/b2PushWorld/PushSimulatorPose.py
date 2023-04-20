@@ -8,13 +8,15 @@ from research_envs.b2PushWorld.Object import CircleObj, RectangleObj, PolygonalO
 
 class PushSimulator:
     def __init__(self, pixelsPerMeter = 20, width = 1024, height = 1024, 
-                 objectiveRadius = 3.0, objProxRadius=15, d=30):
+                 objectiveRadius = 3.0, objProxRadius=15):
         # opencv is used for simple rendering to avoid
         # box2D framework
         self.pixels_per_meter = pixelsPerMeter
         self.width = width
         self.height = height
-        self.screen = np.zeros(shape=(self.height, self.width), dtype=np.float32)
+        self.screen_width = int(width*1.15)
+        self.screen_height = int(height*1.15)
+        self.screen = np.zeros(shape=(self.screen_height, self.screen_width), dtype=np.float32)
         self.state_shape = (16,16,1)
         self.observed_dist_shape = (320,320,3)
 
@@ -38,51 +40,36 @@ class PushSimulator:
         self.agent = Agent(simulator=self, x=30, y=25, radius=1.0, velocity=2.0, forceLength=2.0, totalDirections=8)
 
         # Define object - goal - robot reset distances
-        # self.d = d
+        self.max_dist_obj_goal = 10
+        self.min_dist_obj_goal = 5
+        self.max_ori_obj_goal = np.pi / 6
 
     def reset(self):
-        # Picks a goal
-        rand_x = randint(0, int(self.width/self.pixels_per_meter))
-        rand_y = randint(0, int(self.height/self.pixels_per_meter))
-        self.goal.x = rand_x
-        self.goal.y = rand_y 
-        self.goal_orientation = random.uniform(0, 2*np.pi)
-
-        # Picks a new object
+        # Limits the box distance to goal and orientation difference.
+        # Create object
         self.obj = self.obj_l[random.randrange(0, len(self.obj_l))]
-        rand_x = randint(0, int(self.width/self.pixels_per_meter))
-        rand_y = randint(0, int(self.height/self.pixels_per_meter))
-        self.obj.obj_rigid_body.position = (rand_x, rand_y)
+
+        max_x = int(self.width/self.pixels_per_meter)
+        max_y = int(self.height/self.pixels_per_meter)
+        box_pos = [random.uniform(0, max_x), random.uniform(0, max_y)]
+
+        self.obj.obj_rigid_body.position = (box_pos[0], box_pos[1])
         self.obj.obj_rigid_body.angle = random.uniform(0, 2*np.pi)
 
-        rand_act = self.agent.GetRandomValidAction()
-        rand_dir = self.agent.ActionIdToForce(rand_act)
-        rand_pos_x = rand_x + rand_dir.x * 5.0
-        rand_pos_y = rand_y + rand_dir.y * 5.0
-        self.agent.agent_rigid_body.position = (rand_pos_x, rand_pos_y)
+        # Create goal based on object
+        rand_rad = random.uniform(-2*np.pi, 2*np.pi)
+        rand_dist = random.uniform(self.min_dist_obj_goal, self.max_dist_obj_goal)
+        self.goal.x = box_pos[0] + rand_dist * np.cos(rand_rad)
+        self.goal.y = box_pos[1] + rand_dist * np.sin(rand_rad)
 
-        # Usando d - falta random orientation
-        # # Criar posicao da caixa
-        # max_x = int(self.width/self.pixels_per_meter)
-        # max_y = int(self.height/self.pixels_per_meter)
-        # box_pos = [random.uniform(0, max_x), random.uniform(0, max_y)]
+        self.goal_orientation = self.obj.obj_rigid_body.angle + random.uniform(
+            -self.max_ori_obj_goal, self.max_ori_obj_goal)
 
-        # self.obj.obj_rigid_body.position = (box_pos[0], box_pos[1])
-
-        # # Obter posicao do goal
-        # rand_rad = random.uniform(-2*np.pi, 2*np.pi)
-        # rand_dir = [np.cos(rand_rad), np.sin(rand_rad)]
-        # goal_pos = [box_pos[0]+self.d*rand_dir[0], box_pos[1]+self.d*rand_dir[1]]
-
-        # self.goal.x = goal_pos[0]
-        # self.goal.y = goal_pos[1]
-
-        # # Obter posicao do robo
-        # rand_rad = random.uniform(-2*np.pi, 2*np.pi)
-        # rand_dir = [np.cos(rand_rad), np.sin(rand_rad)]
-        # rob_pos = [box_pos[0]+self.goal_radius*rand_dir[0], box_pos[1]+self.goal_radius*rand_dir[1]]
-
-        # self.agent.agent_rigid_body.position = (rob_pos[0], rob_pos[1])
+        # Obter posicao do robo
+        rand_rad = random.uniform(-2*np.pi, 2*np.pi)
+        rand_dir = [np.cos(rand_rad), np.sin(rand_rad)]
+        self.agent.agent_rigid_body.position = (
+            box_pos[0] + 5*rand_dir[0], box_pos[1] + 5*rand_dir[1])
 
 
     def getLastObjPosition(self):
@@ -168,7 +155,7 @@ class PushSimulator:
         output_gray[7,8] = 1.0
         output_gray[8,7] = 1.0
         output_gray[8,8] = 1.0
-        
+
         return output_gray
 
     def drawArrow(self, image, world_pos, angle, len, color):
@@ -197,7 +184,7 @@ class PushSimulator:
 
     def drawToBuffer(self):
         # clear previous buffer
-        self.screen = np.ones(shape=(self.height, self.width, 3), dtype=np.float32)
+        self.screen = np.ones(shape=(self.screen_height, self.screen_width, 3), dtype=np.float32)
 
         # draw all shapes and objects
         # Draw the object in the goal location with the goal orientation

@@ -26,7 +26,7 @@ from research_envs.b2PushWorld.PushSimulatorPose import PushSimulator
 from research_envs.cv_buffer.CvDrawBuffer import CvDrawBuffer
 
 class Box2DPushingEnv():
-    def __init__(self, smoothDraw=True, reward=RewardFunctions.PROJECTION, max_steps=100, d=30):
+    def __init__(self, reward=RewardFunctions.PROJECTION, max_steps=100):
         print('Box2d Pushing Environment with pose goal')
         # the timestep is used to simulate discrete steps through the
         # engine's integrator and it is calculated in seconds
@@ -38,14 +38,13 @@ class Box2DPushingEnv():
         
         # restrictions 
         self.object_distance = 12
-        self.safe_zone_radius = 2
-        self.orientation_eps = 0.174533 *2 # 10 degrees
+        self.safe_zone_radius = 4
+        self.orientation_eps = np.pi/6
 
         # simulator initialization
         self.push_simulator = PushSimulator(
             pixelsPerMeter=20, width=1024, height=1024, 
-            objectiveRadius=self.safe_zone_radius, objProxRadius=self.object_distance, d=d)
-        self.smooth_draw = smoothDraw
+            objectiveRadius=self.safe_zone_radius, objProxRadius=self.object_distance)
 
         # keep track of this environment state shape for outer references
         self.state_shape = self.push_simulator.state_shape
@@ -63,10 +62,6 @@ class Box2DPushingEnv():
         self.scene_buffer = CvDrawBuffer(window_name="Push Simulation", resolution=(1024,1024))
         # self.robot_img_state = CvDrawBuffer(window_name="Image State", resolution=(320,320))
         self.robot_img_state = CvDrawBuffer(window_name="Image State", resolution=(16,16))
-
-        if self.smooth_draw == True:
-            self.draw_thread = Thread(target=self.threadedRendering)
-            self.draw_thread.start()
 
         self.reward_func = reward
         # End episode after max_steps
@@ -191,25 +186,8 @@ class Box2DPushingEnv():
         while(self.push_simulator.agent.IsPerformingAction()):
             self.push_simulator.update(timeStep=self.timestep, velocity_iterator=self.vel_iterator, position_iterator=self.pos_iterator)
 
-            if self.smooth_draw == True:
-                # performing sampling if delta is higher than frequency in ms
-                #if sampling >= self.sampling_frequency and self.smooth_draw == True:
-                async_buffer = self.push_simulator.drawToBuffer()
-                img_state = self.push_simulator.getStateImg()
-                self.scene_buffer.PushFrame(async_buffer)
-                self.robot_img_state.PushFrame(img_state)
-
         # get the last state for safe computation
         observation = self.getObservation()
-
-        # if smooth draw is off, get 
-        # the framebuffer only after performing
-        # a full step 
-        if self.smooth_draw == False:
-            async_buffer = self.push_simulator.drawToBuffer()
-            img_state = self.push_simulator.getStateImg()
-            self.scene_buffer.PushFrame(async_buffer)
-            self.robot_img_state.PushFrame(img_state)
 
         # check if agent broke restriction 
         dist_to_object = self.push_simulator.distToObject()
@@ -221,10 +199,6 @@ class Box2DPushingEnv():
             info = {'success': True}
 
         # compute reward
-        # if self.reward_func == RewardFunctions.FOCAL_POINTS:
-            # reward = self.rewardFocalPoints()
-        # if self.reward_func == RewardFunctions.REACHING_PROJECTION:
-            # reward = self.rewardReachingProjection()
         if self.reward_func == RewardFunctions.PROJECTION:            
             reward = self.rewardProjection()
         if self.reward_func == RewardFunctions.PROGRESS:            
@@ -241,29 +215,15 @@ class Box2DPushingEnv():
     def reset(self):
         self.push_simulator.reset()
         self.step_cnt = 0
-
         # get new observation for a new epoch or simulation
         observation = self.getObservation()
-
-        # Fill render
-        async_buffer = self.push_simulator.drawToBuffer()
-        self.scene_buffer.PushFrame(async_buffer)
-        self.robot_img_state.PushFrame(observation['state_img'])
-
         # observation, info
-        return observation
-
-    def threadedRendering(self):
-        while True:
-            self.scene_buffer.Draw()
-            self.robot_img_state.Draw()
-            cv2.waitKey(1)      
+        return observation   
 
     def render(self):
-        # prevent draw calls if async thread is running
-        if self.smooth_draw == True:
-            return
-
+        # Draw
+        self.scene_buffer.PushFrame(self.push_simulator.drawToBuffer())
+        self.robot_img_state.PushFrame(self.push_simulator.getStateImg())
         self.scene_buffer.Draw()
         self.robot_img_state.Draw()
         cv2.waitKey(1)
@@ -273,11 +233,7 @@ class Box2DPushingEnv():
         return
 
 def test():
-    # when using the environment explicitly you do not need to
-    # register it into the GyM API inside the __init__.py of your
-    # custom GyM environment.
     environment = Box2DPushingEnv(smoothDraw=False)
-
     obs = environment.reset()
     reward = 0.0
     done = False

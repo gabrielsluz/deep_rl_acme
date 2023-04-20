@@ -25,7 +25,7 @@ def key_to_action(key):
 
 if __name__ == "__main__":
     verbose = True
-    env = Box2DPushingEnv(smoothDraw=False, reward=RewardFunctions.PROGRESS)
+    env = Box2DPushingEnv(reward=RewardFunctions.PROGRESS)
     for obj in env.push_simulator.obj_l:
         print(obj.obj_rigid_body.mass, obj.obj_rigid_body.inertia)
     
