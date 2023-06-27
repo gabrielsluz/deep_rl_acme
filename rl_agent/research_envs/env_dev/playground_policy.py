@@ -26,9 +26,9 @@ def key_to_action(key):
 
 if __name__ == "__main__":
     verbose = True
-    env = Box2DPushingEnv(reward=RewardFunctions.PROGRESS_SHAPING)
-    # for obj in env.push_simulator.obj_l:
-    #     print(obj.obj_rigid_body.mass, obj.obj_rigid_body.inertia)
+    env = Box2DPushingEnv(reward=RewardFunctions.PROGRESS)
+    for obj in env.push_simulator.obj_l:
+        print(obj.obj_rigid_body.mass, obj.obj_rigid_body.inertia)
     
     env.reset()
     env.render()
@@ -40,11 +40,11 @@ if __name__ == "__main__":
 
         action = key_to_action(key)
         if action != -1:
+            action = env.push_simulator.getClosestActionToObject()
             next_state, reward, done, info = env.step(action)
             # print(next_state['aux_info'])
             if verbose:
                 print('Reward: {:.2f} Done: {} Info: {}'.format(reward, done, info))
-                print('Dist to obj: {:.2f} Dist to ori: {:.2f}'.format(env.push_simulator.distToObjective(), env.push_simulator.distToOrientation()))
             env.render()
 
             if done == True:

@@ -106,12 +106,6 @@ class DQNFromConfig(agent.Agent):
             min_observations=max(config.batch_size, config.min_replay_size),
             observations_per_step=config.observations_per_step,
         )
-    # Agent -> EGreedyActor -> ActorCore
-    # Interagir com o agent => set_epsilon/get_epsilon
-    # Pode usar o Agent normal, pois o actor recebe a observation e o ActorCore que recebe o state.
-    # EGreedyActor => Ajustar funcoes para manter o epsilon e dacair em uma taxa
-    # ActorCore => política deve receber estado como entrada => EpsilonState. 
-    #   Com base na  alternating_epsilons_actor_core
 
 
 class DQN(DQNFromConfig):

@@ -8,3 +8,4 @@ class RewardFunctions(Enum):
     PROJECTION = 1
     REACHING_PROJECTION = 2
     PROGRESS = 3
+    PROGRESS_SHAPING = 4

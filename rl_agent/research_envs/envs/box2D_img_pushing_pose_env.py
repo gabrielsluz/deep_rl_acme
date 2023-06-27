@@ -38,8 +38,8 @@ class Box2DPushingEnv():
         
         # restrictions 
         self.object_distance = 12
-        self.safe_zone_radius = 4
-        self.orientation_eps = np.pi/6
+        self.safe_zone_radius = 2
+        self.orientation_eps = np.pi/36
 
         # simulator initialization
         self.push_simulator = PushSimulator(
@@ -52,9 +52,10 @@ class Box2DPushingEnv():
             'state_img': Box(low=0.0, high=1.0, shape=self.state_shape, dtype=np.float32),	
             'aux_info': Box(low=-np.inf, high=np.inf, shape=(2,), dtype=np.float32)})
         self.action_space = Discrete(self.push_simulator.agent.directions)
-        self.max_objective_dist = np.sqrt(	
-            (self.push_simulator.width/self.push_simulator.pixels_per_meter)** 2 + 	
-            (self.push_simulator.height/self.push_simulator.pixels_per_meter)** 2)	
+        # self.max_objective_dist = np.sqrt(	
+        #     (self.push_simulator.width/self.push_simulator.pixels_per_meter)** 2 + 	
+        #     (self.push_simulator.height/self.push_simulator.pixels_per_meter)** 2)
+        self.max_objective_dist = self.push_simulator.max_dist_obj_goal * 1.2
 
 
         # async cv buffers for full step rasterization
@@ -153,6 +154,39 @@ class Box2DPushingEnv():
         total_reward = progress_reward*0.5 + orient_reward*0.5 + time_penalty	
         return total_reward
 
+    def rewardProgressShaping(self):
+        # Two parts: position; position and orientation
+        # Reward based on the progress of the agent towards the goal	
+        # Limits the maximum reward to [-1.0, 1.0] (except for success or death)	
+        total_reward = 0.0	
+        progress_reward = 0.0
+        orient_reward = 0.0	
+        success_reward = 2.0	
+        death_penalty = -1.0	
+        time_penalty = -0.01	
+
+        dist_to_object = self.push_simulator.distToObject()	
+        if self.checkSuccess():
+            return success_reward	
+        if dist_to_object > self.object_distance:	
+            return death_penalty	
+        # progress reward	
+        last_dist = (self.push_simulator.goal - self.push_simulator.getLastObjPosition()).length	
+        cur_dist = (self.push_simulator.goal - self.push_simulator.getObjPosition()).length	
+        # Tries to scale between -1 and +1, but also clips it	
+        max_gain = 2.0 # Heuristic, should be adapted to the environment	
+        progress_reward = (last_dist - cur_dist) / max_gain  	
+        progress_reward = max(min(progress_reward, 1.0), -1.0)	
+
+        # If the object is close enough to the goal, we also reward the orientation
+        orient_reward = 0.0
+        if cur_dist < 10:
+            orient_reward = abs(self.last_orient_error) - abs(self.push_simulator.distToOrientation()/np.pi)
+        	
+        # compute total reward, weigthing to give more importance to success or death	
+        total_reward = progress_reward*0.5 + orient_reward*0.5 + time_penalty	
+        return total_reward
+
     def getRandomValidAction(self):
         return self.push_simulator.agent.GetRandomValidAction()
 
@@ -203,6 +237,9 @@ class Box2DPushingEnv():
             reward = self.rewardProjection()
         if self.reward_func == RewardFunctions.PROGRESS:            
             reward = self.rewardProgress()
+        if self.reward_func == RewardFunctions.PROGRESS_SHAPING:
+            reward = self.rewardProgressShaping()
+        
 
         # Check if time limit exceeded
         self.step_cnt += 1

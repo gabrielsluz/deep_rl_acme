@@ -5,13 +5,16 @@ https://github.com/deepmind/acme
 Requires a Linux based OS.
 Docker tutorial: https://towardsdatascience.com/a-complete-guide-to-building-a-docker-image-serving-a-machine-learning-system-in-production-d8b5b0533bde
 
-Docker:
-
+Docker old:
 ```
 docker build -t acme_im .
 docker run -it -v /Users/zeba/Desktop/Mestrado/Dissertacao/box_pushing/acme_dev:/shared_dir  acme_im /bin/bash
 ```
-
+Docker:
+```
+docker build -t acme_img .
+docker run -it --rm -v /Users/zeba/Desktop/Mestrado/Dissertacao/box_pushing/acme_dev:/shared_dir  acme_img /bin/bash
+```
 
 Modificacoes no container:
 - Installar htop
@@ -21,7 +24,7 @@ pip install box2d-py==2.3.8
 pip install opencv-python==4.5.5.62
 ```
 Colocar no Docker para dependencias do OpenCV:
-RUN apt-get update && apt-get install ffmpeg libsm6 libxext6  -y
+RUN apt-get update && apt-get install ffmpeg libsm6 libxext6 -y
 
 
 Quero que esse contianer funcione como um ambiente para rodar diferentes programas. Ou seja, tenho que passar o código por fora.

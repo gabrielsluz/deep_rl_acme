@@ -8,14 +8,14 @@ from research_envs.b2PushWorld.Object import CircleObj, RectangleObj, PolygonalO
 
 class PushSimulator:
     def __init__(self, pixelsPerMeter = 20, width = 1024, height = 1024, 
-                 objectiveRadius = 3.0, objProxRadius=15):
+                 objectiveRadius = 3.0, objProxRadius=15, objList=None):
         # opencv is used for simple rendering to avoid
         # box2D framework
         self.pixels_per_meter = pixelsPerMeter
         self.width = width
         self.height = height
-        self.screen_width = int(width*1.15)
-        self.screen_height = int(height*1.15)
+        self.screen_width = int(width*2)
+        self.screen_height = int(height*2)
         self.screen = np.zeros(shape=(self.screen_height, self.screen_width), dtype=np.float32)
         self.state_shape = (16,16,1)
         self.observed_dist_shape = (320,320,3)
@@ -30,19 +30,22 @@ class PushSimulator:
         self.goal = b2Vec2(0,0)
         self.goal_orientation = 0.0
 
-        # ----------- specify objetcs -----------
-        self.obj_l = [
-            CircleObj(simulator=self, x=25, y=25, radius=4.0),
-            RectangleObj(simulator=self, x=25, y=25, height=10, width=5),
-            PolygonalObj(simulator=self, x=25, y=25, vertices=[(5,10), (0,0), (10,0)])
-        ]
+        # ----------- specify objects -----------
+        if objList is None:
+            self.obj_l = [
+                CircleObj(simulator=self, x=25, y=25, radius=4.0),
+                RectangleObj(simulator=self, x=25, y=25, height=10, width=5),
+                PolygonalObj(simulator=self, x=25, y=25, vertices=[(5,10), (0,0), (10,0)])
+            ]
+        else:
+            self.obj_l = objList
         self.obj = self.obj_l[random.randrange(0, len(self.obj_l))]
         self.agent = Agent(simulator=self, x=30, y=25, radius=1.0, velocity=2.0, forceLength=2.0, totalDirections=8)
 
         # Define object - goal - robot reset distances
-        self.max_dist_obj_goal = 10
-        self.min_dist_obj_goal = 5
-        self.max_ori_obj_goal = np.pi / 6
+        self.max_dist_obj_goal = 30
+        self.min_dist_obj_goal = 2
+        self.max_ori_obj_goal = np.pi / 2
 
     def reset(self):
         # Limits the box distance to goal and orientation difference.
@@ -51,7 +54,10 @@ class PushSimulator:
 
         max_x = int(self.width/self.pixels_per_meter)
         max_y = int(self.height/self.pixels_per_meter)
-        box_pos = [random.uniform(0, max_x), random.uniform(0, max_y)]
+        # box_pos = [random.uniform(0, max_x), random.uniform(0, max_y)]
+        box_pos = [
+            random.uniform(self.max_dist_obj_goal, max_x + self.max_dist_obj_goal), 
+            random.uniform(self.max_dist_obj_goal, max_y + self.max_dist_obj_goal)]
 
         self.obj.obj_rigid_body.position = (box_pos[0], box_pos[1])
         self.obj.obj_rigid_body.angle = random.uniform(0, 2*np.pi)
@@ -200,3 +206,16 @@ class PushSimulator:
         cv2.circle(self.screen, screen_pos, int(self.agent.agent_radius*self.pixels_per_meter), (1, 0, 0, 0), -1)
 
         return self.screen
+
+
+    # Returns the action that is closest to the direction agent to object
+    def getClosestActionToObject(self):
+        # Get the direction from the agent to the object
+        direction = self.getObjPosition() - self.getAgentPosition()
+        direction.Normalize()
+        # Get action directions
+        actions_directions = [self.agent.ActionIdToForce(i) for i in range(self.agent.directions)]
+        # Compute inner product between direction and action directions
+        inner_products = [np.dot(direction, action_direction) for action_direction in actions_directions]
+        action = np.argmax(inner_products)
+        return action

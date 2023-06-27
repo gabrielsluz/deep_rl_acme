@@ -13,11 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""A simple agent-environment training loop."""
+"""Agent-environment inference loop"""
 
 import operator
 import time
 from typing import Optional, Sequence
+import collections
+import copy
 
 from acme import core
 from acme.utils import counting
@@ -31,7 +33,7 @@ import numpy as np
 import tree
 
 
-class EnvironmentLoop(core.Worker):
+class PushEnvironmentLoop(core.Worker):
   """A simple RL environment loop.
 
   This takes `Environment` and `Actor` instances and coordinates their
@@ -80,12 +82,18 @@ class EnvironmentLoop(core.Worker):
     observation and then give that observation to the agent in order to retrieve
     an action.
 
+    With special code to improve performance on Pushing task.
+
     Returns:
       An instance of `loggers.LoggingData`.
     """
     # Reset any counts and start the environment.
     start_time = time.time()
     episode_steps = 0
+
+    stuck_steps = 10
+    obj_pos_deque = collections.deque(maxlen=stuck_steps)
+    # robot_pos_deque = collections.deque(maxlen=stuck_steps)
 
     # For evaluation, this keeps track of the total undiscounted reward
     # accumulated during the episode.
@@ -94,6 +102,7 @@ class EnvironmentLoop(core.Worker):
     timestep = self._environment.reset()
     # Make the first observation.
     self._actor.observe_first(timestep)
+    obj_pos_deque.append(np.array(self._environment.push_simulator.getObjPosition()))
     for observer in self._observers:
       # Initialize the observer with the current state of the env after reset
       # and the initial timestep.
@@ -101,12 +110,19 @@ class EnvironmentLoop(core.Worker):
 
     # Run an episode.
     while not timestep.last():
-      # Generate an action from the agent's policy and step the environment.
-      action = self._actor.select_action(timestep.observation)
+      # print('Deque = ', obj_pos_deque)
+      # print('Allclose = ', np.allclose(obj_pos_deque[0], obj_pos_deque[-1]))
+      # If the object is stuck, take action torwards the object
+      if len(obj_pos_deque) == stuck_steps and np.allclose(obj_pos_deque[0], obj_pos_deque[-1]):
+        action = self._environment.push_simulator.getClosestActionToObject()
+      else:
+        # Generate an action from the agent's policy and step the environment.
+        action = self._actor.select_action(timestep.observation)
       timestep = self._environment.step(action)
 
       # Have the agent observe the timestep and let the actor update itself.
       self._actor.observe(action, next_timestep=timestep)
+      obj_pos_deque.append(np.array(self._environment.push_simulator.getObjPosition()))
       for observer in self._observers:
         # One environment step was completed. Observe the current state of the
         # environment, the current timestep and the action.
@@ -182,6 +198,7 @@ class EnvironmentLoop(core.Worker):
         print(result)
 
 # Placeholder for an EnvironmentLoop alias
+
 
 def _generate_zeros_from_spec(spec: specs.Array) -> np.ndarray:
   return np.zeros(spec.shape, spec.dtype)

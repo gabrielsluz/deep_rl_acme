@@ -19,7 +19,7 @@ class Box2DPushingEnv():
         
         # restrictions 
         self.object_distance = 12
-        self.safe_zone_radius = 1
+        self.safe_zone_radius = 2
 
         # simulator initialization
         self.push_simulator = PushSimulator(
