@@ -193,7 +193,6 @@ class PoseSubGoalEnv():
         self.robot_img_state.Draw()
         cv2.waitKey(1)
 
-
 def interpolate_scalar(start, end, step_sz):
     # Returns a list of scalars interpolated between start and end.
     # Start can be greater than end.
@@ -202,9 +201,9 @@ def interpolate_scalar(start, end, step_sz):
     if start == end:
         return [start]
     if start < end:
-        return list(np.arange(start, end+step_sz, step_sz))
+        return list(np.arange(start, end, step_sz)) + [end]
     else:
-        return list(np.arange(start, end-step_sz, -step_sz))
+        return list(np.arange(start, end, -step_sz)) + [end]
 
 def interpolation_reset_fn(env):
     """
@@ -224,11 +223,11 @@ def interpolation_reset_fn(env):
 
     # Calculate linear interpolation between start and goal.
     x_l = interpolate_scalar(
-        env.push_simulator.obj.obj_rigid_body.position[0], env.push_simulator.goal.x, 1)
+        env.push_simulator.obj.obj_rigid_body.position[0], env.push_simulator.goal.x, 100)
     y_l = interpolate_scalar(
-        env.push_simulator.obj.obj_rigid_body.position[1], env.push_simulator.goal.y, 1)
+        env.push_simulator.obj.obj_rigid_body.position[1], env.push_simulator.goal.y, 100)
     angle_l = interpolate_scalar(
-        env.push_simulator.obj.obj_rigid_body.angle, env.push_simulator.goal_orientation, np.pi/36)
+        env.push_simulator.obj.obj_rigid_body.angle, env.push_simulator.goal_orientation, 2*np.pi)
 
     max_len = max(max(len(x_l), len(y_l)), len(angle_l))
     goal_l = []

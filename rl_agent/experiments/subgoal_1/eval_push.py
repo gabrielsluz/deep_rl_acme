@@ -9,6 +9,7 @@ import haiku as hk
 import rlax
 import pickle
 import time
+import collections
 
 import acme
 from acme import specs
@@ -39,24 +40,33 @@ class ParamHolder():
 
 # Eval loop
 # episode_length,episode_return,episodes,steps,steps_per_second,success
-def run_episode(env, agent, observers=[], max_steps=200):
+def run_episode(env, agent, observers=[], max_steps=200, stuck_steps=10):
     res = {
         'episode_length': 0,
         'episode_return': 0,
     }
+    obj_pos_deque = collections.deque(maxlen=stuck_steps)
+
     start_time = time.time()
     timestep = env.reset()
     agent.observe_first(timestep)
     for observer in observers:
       observer.observe_first(env, timestep)
+    obj_pos_deque.append(np.array(env.push_simulator.getObjPosition()))
 
     while not timestep.last():
-        action = agent.select_action(timestep.observation)
+        # If the object is stuck, take action torwards the object
+        if len(obj_pos_deque) == stuck_steps and np.allclose(obj_pos_deque[0], obj_pos_deque[-1]):
+          action = env.push_simulator.getClosestActionToObject()
+        else:
+          # Generate an action from the agent's policy and step the environment.
+          action = agent.select_action(timestep.observation)
         timestep = env.step(action)
 
         agent.observe(action, next_timestep=timestep)
         for observer in observers:
             observer.observe(env, timestep, action)
+        obj_pos_deque.append(np.array(env.push_simulator.getObjPosition()))
         res['episode_return'] += timestep.reward
         res['episode_length'] += 1
         if res['episode_length'] >= max_steps:
@@ -72,7 +82,7 @@ def run_episode(env, agent, observers=[], max_steps=200):
 # ENV
 def create_environment():
     env = PoseSubGoalEnv()
-    env = RecordVideoWrapper(env, 'videos')
+    # env = RecordVideoWrapper(env, 'videos')
     env = GymWrapper(env)
     env = DictStackWrapper(env, stackDepth=4)
     return env
