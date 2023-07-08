@@ -92,7 +92,7 @@ def interpolation_reset_fn(env):
     y_diff = abs(start_c[1] - goal_c[1])
     ori_diff = abs(start_c[2] - goal_c[2])
     num_steps = max(ori_diff/max_ori_step, max(x_diff/max_pos_step, y_diff/max_pos_step))
-    num_steps = int(np.ceil(num_steps))
+    num_steps = int(np.ceil(num_steps))+1
     interp_arr = np.linspace(
             start_c,
             goal_c,
