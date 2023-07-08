@@ -48,7 +48,7 @@ def interpolate_scalar(start, end, step_sz, min_step_sz):
 
 def interpolation_reset_fn(env):
     """
-    Resets the environment
+    Resets the environment and generates subgoals by linear interpolation.
         init_state: {
             'obj': research_envs.b2PushWorld.Object,
             'obj_pos': (x,y),
@@ -86,8 +86,8 @@ def interpolation_reset_fn(env):
         else:
             goal_c[2] = goal_c[2] + 2*np.pi
     # Calculate interpolation
-    max_pos_step = 30
-    max_ori_step = np.pi/2
+    max_pos_step = env.max_pos_step
+    max_ori_step = env.max_ori_step
     x_diff = abs(start_c[0] - goal_c[0])
     y_diff = abs(start_c[1] - goal_c[1])
     ori_diff = abs(start_c[2] - goal_c[2])
@@ -113,7 +113,7 @@ def interpolation_reset_fn(env):
     env.push_simulator.goal_orientation = goal_l[0]['angle']
     env.cur_goal_idx = 0
     
-    env.goal_tol = {'pos':2, 'angle': np.pi/36}
+    env.goal_tol = {'pos':env.goal_dist_tol, 'angle': env.goal_ori_tol}
     # env.subgoal_tol = {'pos':4, 'angle': np.pi/9}
     env.obstacle_l = []
     env.checkSuccess()
@@ -126,8 +126,6 @@ class PoseSubGoalEnvConfig:
             the episode terminates.
         goal_dist_tol: Necessary distance to consider the goal reached.
         goal_ori_tol: Necessary orientation to consider the goal reached.
-        subgoal_dist_tol: Necessary distance to consider the subgoal reached.
-        subgoal_ori_tol: Necessary orientation to consider the subgoal reached.
         reset_fn: Function that receives the env as input and resets its internal state.
             The idea is to make significant changes to env every reset.
 
@@ -135,6 +133,10 @@ class PoseSubGoalEnvConfig:
     """
     # Episode termination config:
     terminate_obj_dist: float = 14.0
+    goal_dist_tol: float = 2.0
+    goal_ori_tol: float = np.pi / 36
+    max_pos_step: float = 30
+    max_ori_step: float = np.pi/2
     reset_fn: callable = interpolation_reset_fn
 
     # Push simulator config:
@@ -187,6 +189,10 @@ class PoseSubGoalEnv():
 
         # reset
         self.reset_fn = config.reset_fn
+        self.max_pos_step = config.max_pos_step
+        self.max_ori_step = config.max_ori_step
+        self.goal_dist_tol = config.goal_dist_tol
+        self.goal_ori_tol = config.goal_ori_tol
         self.reset()
 
     def reset(self):

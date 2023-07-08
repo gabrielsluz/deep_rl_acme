@@ -34,18 +34,6 @@ if __name__ == "__main__":
         )
     )
     env = PoseSubGoalEnv(config=config)
-    # init_state = {
-    #     'obj': PolygonalObj(simulator=env.push_simulator, x=0.5, y=0.5, vertices=[(5,10), (0,0), (10,0)]),
-    #     'obj_pos': (15.0, 15.5),
-    #     'obj_angle': 0.0,
-    #     'robot_pos': (0.1, 0.1)
-    # }
-    # goal_l = [
-    #     {'pos':(10.0, 10.0), 'angle':0.0},
-    #     {'pos':(40.0, 40.0), 'angle':0.0}
-
-    # ]
-    # env.reset(init_state=init_state, goal_l=goal_l)
     env.reset()
     env.render()
     while True:
