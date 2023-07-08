@@ -157,13 +157,21 @@ class PushSimulator:
     def distToObject(self):
         return (self.agent.agent_rigid_body.position - self.obj.obj_rigid_body.position).length
 
+    """
+    How to calculate the difference between the object and the goal orientation?
+    It is used to compute the reward, check success and the agents observation.
+    The fixed point is the object orientation. 
+    If the shortest path from the object orientation to the goal orientation is clockwise,
+    the difference is positive. Otherwise, it is negative.
+    """
     def distToOrientation(self):
         if self.obj.obj_type == 'Circle': # Does not work well with circles
             return 0.0
         else:
             # Calculate the angle between the object and the goal
             obj_angle = self.obj.obj_rigid_body.angle % (2*np.pi)
-            angle_diff = self.goal_orientation - obj_angle
+            goal_angle = self.goal_orientation % (2*np.pi)
+            angle_diff = goal_angle - obj_angle
             if angle_diff > np.pi:
                 angle_diff -= 2*np.pi
             elif angle_diff < -np.pi:
