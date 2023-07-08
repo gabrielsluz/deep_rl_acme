@@ -63,21 +63,49 @@ def interpolation_reset_fn(env):
     env.push_simulator.reset() # Randomly resets goal, robot and object
 
     # Calculate linear interpolation between start and goal.
-    x_l = interpolate_scalar(
-        env.push_simulator.obj.obj_rigid_body.position[0], env.push_simulator.goal.x, 10, 5)
-    y_l = interpolate_scalar(
-        env.push_simulator.obj.obj_rigid_body.position[1], env.push_simulator.goal.y, 10, 5)
-    angle_l = interpolate_scalar(
-        env.push_simulator.obj.obj_rigid_body.angle, env.push_simulator.goal_orientation, np.pi/4, np.pi/8)
-
-    max_len = max(max(len(x_l), len(y_l)), len(angle_l))
+    start_c = [
+        env.push_simulator.obj.obj_rigid_body.position[0], 
+        env.push_simulator.obj.obj_rigid_body.position[1], 
+        env.push_simulator.obj.obj_rigid_body.angle]
+    goal_c = [   
+        env.push_simulator.goal.x,
+        env.push_simulator.goal.y,
+        env.push_simulator.goal_orientation]
+    # Adjust angle values so that interpolation takes the shortest path
+    start_c[2] = start_c[2] % (2*np.pi)
+    goal_c[2] = goal_c[2] % (2*np.pi)
+    # Find the shortest path
+    big_angle = max(start_c[2], goal_c[2])
+    small_angle = min(start_c[2], goal_c[2])
+    clockwise_dist = big_angle - small_angle
+    counterclockwise_dist = (2*np.pi - big_angle) + small_angle
+    if counterclockwise_dist < clockwise_dist:
+        # small_angle = small_angle + 2*np.pi
+        if start_c[2] <= goal_c[2]:
+            start_c[2] = start_c[2] + 2*np.pi
+        else:
+            goal_c[2] = goal_c[2] + 2*np.pi
+    # Calculate interpolation
+    max_pos_step = 30
+    max_ori_step = np.pi/2
+    x_diff = abs(start_c[0] - goal_c[0])
+    y_diff = abs(start_c[1] - goal_c[1])
+    ori_diff = abs(start_c[2] - goal_c[2])
+    num_steps = max(ori_diff/max_ori_step, max(x_diff/max_pos_step, y_diff/max_pos_step))
+    num_steps = int(np.ceil(num_steps))
+    interp_arr = np.linspace(
+            start_c,
+            goal_c,
+            num=num_steps,
+            endpoint=True
+    )
     goal_l = []
-    for i in range(1, max_len):
+    for i in range(1, num_steps):
         goal_l.append({
-            'pos': (x_l[min(i, len(x_l)-1)], y_l[min(i, len(y_l)-1)]),
-            'angle': angle_l[min(i, len(angle_l)-1)]
+            'pos': (interp_arr[i,0], interp_arr[i,1]),
+            'angle': interp_arr[i,2]
         })
-    env.goal_l = goal_l
+    env.goal_l = goal_l 
 
     # Initialize goal with the first subgoal
     env.push_simulator.goal.x = goal_l[0]['pos'][0]

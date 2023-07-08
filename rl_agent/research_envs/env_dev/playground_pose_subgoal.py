@@ -6,10 +6,10 @@ import sys
 sys.path.append('.')
 
 import cv2
+import numpy as np
 
 from research_envs.experiment_envs.pose_subgoal_env import PoseSubGoalEnv, PoseSubGoalEnvConfig
-# from research_envs.envs.box2D_img_pushing_env import Box2DPushingEnv
-from research_envs.b2PushWorld.Object import CircleObj, RectangleObj, PolygonalObj
+from research_envs.b2PushWorld.PushSimulatorPose import PushSimulatorConfig
 
 
 def key_to_action(key):
@@ -26,7 +26,14 @@ def key_to_action(key):
 
 if __name__ == "__main__":
     verbose = True
-    env = PoseSubGoalEnv()
+    config = PoseSubGoalEnvConfig(
+        push_simulator_config=PushSimulatorConfig(
+            max_dist_obj_goal = 30,
+            min_dist_obj_goal = 20,
+            max_ori_obj_goal = 2*np.pi
+        )
+    )
+    env = PoseSubGoalEnv(config=config)
     # init_state = {
     #     'obj': PolygonalObj(simulator=env.push_simulator, x=0.5, y=0.5, vertices=[(5,10), (0,0), (10,0)]),
     #     'obj_pos': (15.0, 15.5),
