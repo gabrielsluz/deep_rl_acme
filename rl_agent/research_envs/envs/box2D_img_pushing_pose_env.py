@@ -1,32 +1,49 @@
-"""
-The goal is a position + orientation => pose
-
-Modifications:
-- Done condition - Done
-- Random orientation start - Done
-- Robot state - Done => check a little more
-- Reward function - Done
-
-Not working well, hypothesis to improve the performance:
-- Remove projection reward when object is in goal position
-- Improve reward function
-- Add distance from object to objective in the state
-- Use continous actions
-- Use a different algorithm
-
-"""
-
 import numpy as np
 import cv2
-from threading import Thread
 from gym.spaces import Box, Discrete, Dict
 
 from research_envs.envs.rewards import RewardFunctions
-from research_envs.b2PushWorld.PushSimulatorPose import PushSimulator
+from research_envs.b2PushWorld.PushSimulatorPose import PushSimulator, PushSimulatorConfig
 from research_envs.cv_buffer.CvDrawBuffer import CvDrawBuffer
 
+import dataclasses
+
+@dataclasses.dataclass
+class Box2DPushingEnvConfig:
+    """Configuration options for the Box2DPushingEnv.
+    Attributes:
+        terminate_obj_dist: If the robot is further than this distance from the object
+            the episode terminates.
+        goal_dist_tol: Necessary distance to consider the goal reached.
+        goal_ori_tol: Necessary orientation to consider the goal reached.
+        max_steps: Maximum number of steps per episode.
+        reward_fn_id: Reward function to use, from rewards.py
+
+    """
+    # Episode termination config:
+    terminate_obj_dist: float = 14.0
+    goal_dist_tol: float = 2.0
+    goal_ori_tol: float = np.pi / 36
+    max_steps: int = 200
+    # Reward config:
+    reward_fn_id: RewardFunctions = RewardFunctions.PROGRESS
+    # Push simulator config:
+    push_simulator_config: PushSimulatorConfig = PushSimulatorConfig(
+        pixels_per_meter=20, width=1024, height=1024,
+        obj_proximity_radius=terminate_obj_dist,
+        objTuple=(
+            {'name':'Circle', 'radius':4.0},
+            {'name': 'Rectangle', 'height': 10.0, 'width': 5.0},
+            {'name': 'Polygon', 'vertices': [(5,10), (0,0), (10,0)]},
+        ),
+        max_dist_obj_goal = 30,
+        min_dist_obj_goal = 2,
+        max_ori_obj_goal = np.pi / 2
+    )
+
+
 class Box2DPushingEnv():
-    def __init__(self, reward=RewardFunctions.PROJECTION, max_steps=100):
+    def __init__(self, config=Box2DPushingEnvConfig):
         print('Box2d Pushing Environment with pose goal')
         # the timestep is used to simulate discrete steps through the
         # engine's integrator and it is calculated in seconds
@@ -37,14 +54,12 @@ class Box2DPushingEnv():
         self.pos_iterator = 2
         
         # restrictions 
-        self.object_distance = 12
-        self.safe_zone_radius = 2
-        self.orientation_eps = np.pi/36
+        self.object_distance = config.terminate_obj_dist
+        self.safe_zone_radius = config.goal_dist_tol
+        self.orientation_eps = config.goal_ori_tol
 
         # simulator initialization
-        self.push_simulator = PushSimulator(
-            pixelsPerMeter=20, width=1024, height=1024, 
-            objectiveRadius=self.safe_zone_radius, objProxRadius=self.object_distance)
+        self.push_simulator = PushSimulator(config.push_simulator_config)
 
         # keep track of this environment state shape for outer references
         self.state_shape = self.push_simulator.state_shape
@@ -52,22 +67,16 @@ class Box2DPushingEnv():
             'state_img': Box(low=0.0, high=1.0, shape=self.state_shape, dtype=np.float32),	
             'aux_info': Box(low=-np.inf, high=np.inf, shape=(2,), dtype=np.float32)})
         self.action_space = Discrete(self.push_simulator.agent.directions)
-        # self.max_objective_dist = np.sqrt(	
-        #     (self.push_simulator.width/self.push_simulator.pixels_per_meter)** 2 + 	
-        #     (self.push_simulator.height/self.push_simulator.pixels_per_meter)** 2)
         self.max_objective_dist = self.push_simulator.max_dist_obj_goal * 1.2
 
-
-        # async cv buffers for full step rasterization
-        # without frameskip
+        # buffers for rendering
         self.scene_buffer = CvDrawBuffer(window_name="Push Simulation", resolution=(1024,1024))
-        # self.robot_img_state = CvDrawBuffer(window_name="Image State", resolution=(320,320))
         self.robot_img_state = CvDrawBuffer(window_name="Image State", resolution=(16,16))
 
-        self.reward_func = reward
+        self.reward_func = config.reward_fn_id
         # End episode after max_steps
         self.step_cnt = 0
-        self.max_steps = max_steps
+        self.max_steps = config.max_steps
 
     def checkSuccess(self):
         # Checks if the object is in the safe zone and in the correct orientation +- epsilon
@@ -180,7 +189,7 @@ class Box2DPushingEnv():
 
         # If the object is close enough to the goal, we also reward the orientation
         orient_reward = 0.0
-        if cur_dist < 10:
+        if cur_dist < 8:
             orient_reward = abs(self.last_orient_error) - abs(self.push_simulator.distToOrientation()/np.pi)
         	
         # compute total reward, weigthing to give more importance to success or death	

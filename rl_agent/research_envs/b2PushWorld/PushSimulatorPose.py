@@ -6,46 +6,104 @@ from Box2D import b2World, b2Vec2, b2Transform
 from research_envs.b2PushWorld.Agent import Agent
 from research_envs.b2PushWorld.Object import CircleObj, RectangleObj, PolygonalObj
 
+import dataclasses
+
+@dataclasses.dataclass
+class PushSimulatorConfig:
+    """
+    Config class for PushSimulator
+    Attributes:
+        pixels_per_meter
+        width: Screen width in pixels
+        height: Screen height in pixels
+        # Objects
+        obj_proximity_radius: Draw circle around object, also viewed on the state.
+        objTuple: Tuple of objects to be added to the simulator.
+        # Initialization
+        max_dist_obj_goal: Maximum initial distance between object and goal
+        min_dist_obj_goal: Minimum initial distance between object and goal
+        max_ori_obj_goal: Maximum initial orientation between object and goal
+        # Agent 
+        agent_radius: Radius of the agent
+        agent_velocity: Velocity of the agent
+        agent_force_length: Length of the force
+        agent_total_directions: Total number of directions the agent can move
+        # State
+        state_shape: Shape of the state
+        observed_dist_shape: Shape of the observed distance in pixels, it will be reshaped to fit
+            in state_shape when returned.
+    """
+    pixels_per_meter: int = 20
+    width: int = 1024
+    height: int = 1024
+    # Objects
+    obj_proximity_radius: float = 14.0
+    objTuple: tuple = (
+        {'name':'Circle', 'radius':4.0},
+        {'name': 'Rectangle', 'height': 10.0, 'width': 5.0},
+        {'name': 'Polygon', 'vertices': [(5,10), (0,0), (10,0)]},
+    )
+    # Initilization
+    max_dist_obj_goal: float = 30
+    min_dist_obj_goal: float = 2
+    max_ori_obj_goal: float = np.pi / 2
+    # Agent
+    agent_radius: float = 1.0
+    agent_velocity: float = 2.0
+    agent_force_length: float = 2.0
+    agent_total_directions: int = 8
+    # State
+    state_shape: tuple = (16,16,1)
+    observed_dist_shape: tuple = (320,320,3)
+
 class PushSimulator:
-    def __init__(self, pixelsPerMeter = 20, width = 1024, height = 1024, 
-                 objectiveRadius = 3.0, objProxRadius=15, objList=None):
+    def __init__(self, config=PushSimulatorConfig):
         # opencv is used for simple rendering to avoid
         # box2D framework
-        self.pixels_per_meter = pixelsPerMeter
-        self.width = width
-        self.height = height
-        self.screen_width = int(width*2)
-        self.screen_height = int(height*2)
+        self.pixels_per_meter = config.pixels_per_meter
+        self.width = config.width
+        self.height = config.height
+        self.screen_width = int(self.width*2)
+        self.screen_height = int(self.height*2)
         self.screen = np.zeros(shape=(self.screen_height, self.screen_width), dtype=np.float32)
-        self.state_shape = (16,16,1)
-        self.observed_dist_shape = (320,320,3)
+        self.state_shape = config.state_shape
+        self.observed_dist_shape = config.observed_dist_shape
 
         # ----------- world creation ----------
         # crate a simple box2D world with -9.8 gravity acceleration
         self.world = b2World(gravity=(0, 0.0), doSleep=False)
 
         # ----------- specify goal position -----------
-        self.goal_radius = objectiveRadius
-        self.obj_proximity_radius = objProxRadius
+        self.obj_proximity_radius = config.obj_proximity_radius
         self.goal = b2Vec2(0,0)
         self.goal_orientation = 0.0
 
-        # ----------- specify objects -----------
-        if objList is None:
-            self.obj_l = [
-                CircleObj(simulator=self, x=25, y=25, radius=4.0),
-                RectangleObj(simulator=self, x=25, y=25, height=10, width=5),
-                PolygonalObj(simulator=self, x=25, y=25, vertices=[(5,10), (0,0), (10,0)])
-            ]
-        else:
-            self.obj_l = objList
+        # ----------- create objects -----------
+        self.obj_l = []
+        for obj_spec in config.objTuple:
+            if obj_spec['name'] == 'Circle':
+                self.obj_l.append(
+                    CircleObj(simulator=self, radius=obj_spec['radius']))
+            elif obj_spec['name'] == 'Rectangle':
+                self.obj_l.append(
+                    RectangleObj(simulator=self, height=obj_spec['height'], width=obj_spec['width']))
+            elif obj_spec['name'] == 'Polygon':
+                self.obj_l.append(
+                    PolygonalObj(simulator=self, vertices=obj_spec['vertices']))
+            else:
+                raise ValueError('Unknown object type')
+
         self.obj = self.obj_l[random.randrange(0, len(self.obj_l))]
-        self.agent = Agent(simulator=self, x=30, y=25, radius=1.0, velocity=2.0, forceLength=2.0, totalDirections=8)
+        self.agent = Agent(
+            simulator=self, x=30, y=25,
+            radius=config.agent_radius,
+            velocity=config.agent_velocity, forceLength=config.agent_force_length,
+            totalDirections=config.agent_total_directions)
 
         # Define object - goal - robot reset distances
-        self.max_dist_obj_goal = 30
-        self.min_dist_obj_goal = 2
-        self.max_ori_obj_goal = np.pi / 2
+        self.max_dist_obj_goal = config.max_dist_obj_goal
+        self.min_dist_obj_goal = config.min_dist_obj_goal
+        self.max_ori_obj_goal = config.max_ori_obj_goal
 
     def reset(self):
         # Limits the box distance to goal and orientation difference.
@@ -75,8 +133,11 @@ class PushSimulator:
         rand_rad = random.uniform(-2*np.pi, 2*np.pi)
         rand_dir = [np.cos(rand_rad), np.sin(rand_rad)]
         self.agent.agent_rigid_body.position = (
-            box_pos[0] + 5*rand_dir[0], box_pos[1] + 5*rand_dir[1])
+            box_pos[0] + 5*rand_dir[0], 
+            box_pos[1] + 5*rand_dir[1])
 
+    def setObjectList(self, objList):
+        self.obj_l = objList
 
     def getLastObjPosition(self):
         return self.obj.last_obj_pos
@@ -135,15 +196,11 @@ class PushSimulator:
 
         # screen coordinates
         obj_g_screen = self.worldToScreen((objective_to_agent.x, objective_to_agent.y))
-        #screen_pos = self.worldToScreen((objective_to_agent.x, objective_to_agent.y))
-        #cv2.circle(screen, screen_pos, int(self.goal_radius*self.pixels_per_meter), (0.0, 1.0, 0.0), thickness=5, lineType=4)
 
         # draw all shapes and objects
         screen_pos = self.worldToScreen((object_to_agent.x, object_to_agent.y))
         cv2.circle(screen, screen_pos, int(self.obj_proximity_radius*self.pixels_per_meter), (0, 1, 0, 0), thickness=5, lineType=4)
         self.obj.DrawInPos(screen_pos, self.pixels_per_meter, screen, (0, 0, 1, 0), -1)
-        # cv2.circle(screen, screen_pos, int(self.obj.obj_radius*self.pixels_per_meter), (0, 0, 1, 0), -1)
-        # cv2.circle(screen, agent_center_point, int(self.agent.agent_radius*self.pixels_per_meter), (1, 0, 0, 0), -1)
         cv2.line(screen, agent_center_point, obj_g_screen, color=(1,0,0,0), thickness=5)
         output_img = np.zeros(shape=self.state_shape, dtype=np.float32)
         output_img = cv2.resize(screen, dsize=(self.state_shape[0], self.state_shape[1]), interpolation = cv2.INTER_AREA)
@@ -151,12 +208,9 @@ class PushSimulator:
         '''
         Make objective direction more visible over obstacle
         '''
-        # output_img[:,:,2] = output_img[:,:,2] - output_img[:,:,0]
         output_gray = cv2.cvtColor(output_img, cv2.COLOR_BGR2GRAY)
         output_gray += output_img[:,:,0] * 10
         output_gray = np.clip(output_gray * 2.0, 0.0, 1.0)
-        #output_gray = output_gray - output_gray * 0.5
-        # output_gray[:,:] = output_gray[:,:] + output_img[:,:,0]
         output_gray[7,7] = 1.0
         output_gray[7,8] = 1.0
         output_gray[8,7] = 1.0
@@ -186,7 +240,6 @@ class PushSimulator:
         vertices = [self.worldToScreen(v) for v in vertices]
         cv2.fillPoly(image, [np.array(vertices)], color)
         self.drawArrow(image, self.goal, self.goal_orientation, 10, color)
-        # cv.drawContours(	image, contours, contourIdx, color[, thickness)
 
     def drawToBuffer(self):
         # clear previous buffer

@@ -7,7 +7,7 @@ sys.path.append('.')
 
 import cv2
 
-from research_envs.experiment_envs.pose_subgoal_env import PoseSubGoalEnv
+from research_envs.experiment_envs.pose_subgoal_env import PoseSubGoalEnv, PoseSubGoalEnvConfig
 # from research_envs.envs.box2D_img_pushing_env import Box2DPushingEnv
 from research_envs.b2PushWorld.Object import CircleObj, RectangleObj, PolygonalObj
 
