@@ -88,10 +88,9 @@ def interpolation_reset_fn(env):
     # Calculate interpolation
     max_pos_step = env.max_pos_step
     max_ori_step = env.max_ori_step
-    x_diff = abs(start_c[0] - goal_c[0])
-    y_diff = abs(start_c[1] - goal_c[1])
+    pos_dist = np.linalg.norm(np.array(start_c[:2]) - np.array(goal_c[:2]))
     ori_diff = abs(start_c[2] - goal_c[2])
-    num_steps = max(ori_diff/max_ori_step, max(x_diff/max_pos_step, y_diff/max_pos_step))
+    num_steps = max(ori_diff/max_ori_step, pos_dist/max_pos_step)
     num_steps = int(np.ceil(num_steps))+1
     interp_arr = np.linspace(
             start_c,
