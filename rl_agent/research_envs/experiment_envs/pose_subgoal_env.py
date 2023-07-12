@@ -113,7 +113,7 @@ def interpolation_reset_fn(env):
     env.cur_goal_idx = 0
     
     env.goal_tol = {'pos':env.goal_dist_tol, 'angle': env.goal_ori_tol}
-    # env.subgoal_tol = {'pos':4, 'angle': np.pi/9}
+    env.subgoal_tol = {'pos':env.subgoal_dist_tol, 'angle': env.subgoal_ori_tol}
     env.obstacle_l = []
     env.checkSuccess()
 
@@ -134,6 +134,9 @@ class PoseSubGoalEnvConfig:
     terminate_obj_dist: float = 14.0
     goal_dist_tol: float = 2.0
     goal_ori_tol: float = np.pi / 36
+    subgoal_dist_tol: float = 2.0
+    subgoal_ori_tol: float = np.pi
+
     max_pos_step: float = 30
     max_ori_step: float = np.pi/2
     reset_fn: callable = interpolation_reset_fn
@@ -192,6 +195,8 @@ class PoseSubGoalEnv():
         self.max_ori_step = config.max_ori_step
         self.goal_dist_tol = config.goal_dist_tol
         self.goal_ori_tol = config.goal_ori_tol
+        self.subgoal_dist_tol = config.subgoal_dist_tol
+        self.subgoal_ori_tol = config.subgoal_ori_tol
         self.reset()
 
     def reset(self):
@@ -210,9 +215,10 @@ class PoseSubGoalEnv():
         # Checks if the object is in the safe zone and in the correct orientation +- epsilon
         dist_to_objetive = self.push_simulator.distToObjective()
         dist_to_orientation = abs(self.push_simulator.distToOrientation())
-        reached_sub = dist_to_objetive < self.goal_tol['pos'] and dist_to_orientation < self.goal_tol['angle']
         if self.cur_goal_idx == len(self.goal_l)-1: # Last goal
-            return reached_sub
+            return dist_to_objetive < self.goal_tol['pos'] and dist_to_orientation < self.goal_tol['angle']
+        
+        reached_sub = dist_to_objetive < self.subgoal_tol['pos'] and dist_to_orientation < self.subgoal_tol['angle']
         reached_final = False
         if reached_sub: # Reached subgoal
             self.cur_goal_idx += 1
