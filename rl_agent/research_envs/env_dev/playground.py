@@ -63,7 +63,8 @@ if __name__ == "__main__":
             # print(next_state['aux_info'])
             if verbose:
                 print('Reward: {:.2f} Done: {} Info: {}'.format(reward, done, info))
-                print('Dist to obj: {:.2f} Dist to ori: {:.2f}'.format(env.push_simulator.distToObjective(), env.push_simulator.distToOrientation()))
+                print('Dist to obj: {:.2f} Dist to ori: {:.2f}'.format(
+                    env.push_simulator.distToObjective(), env.push_simulator.distToOrientation()))
                 print('Dist to goal: {:.2f}'.format(env.push_simulator.distToObjective()))
             env.render()
 
